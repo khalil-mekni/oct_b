@@ -1,0 +1,81 @@
+"""
+Stock snapshot (résumé) par entrepôt + emballage + lot + date
+"""
+type Stock {
+  id: ID!
+  entrepot_id: ID!
+  emballage_id: ID!
+  lot_id: ID
+  date_stock: DateTime!
+
+  quantite_init: Float!
+  quantite_entree: Float!
+  quantite_sortie: Float!
+  quantite_finale: Float!
+
+  user_id: ID
+  created_at: DateTime
+  updated_at: DateTime
+
+  entrepot: Entrepot @belongsTo
+  emballage: Emballage @belongsTo
+  lot: Lot @belongsTo
+  user: User @belongsTo
+}
+
+input CreateStockInput {
+  entrepot_id: ID!
+  emballage_id: ID!
+  lot_id: ID
+  date_stock: DateTime!
+
+  quantite_init: Float
+  quantite_entree: Float
+  quantite_sortie: Float
+
+  user_id: ID
+}
+
+input UpdateStockInput {
+  id: ID!
+  lot_id: ID
+  date_stock: DateTime
+
+  quantite_init: Float
+  quantite_entree: Float
+  quantite_sortie: Float
+
+  user_id: ID
+}
+
+extend type Query {
+  stocks: [Stock!]! @paginate
+  stock(id: ID! @eq): Stock @find
+}
+
+extend type Mutation {
+  createStock(input: CreateStockInput!): Stock
+    @field(resolver: "App\\GraphQL\\Mutations\\StockMutator@create")
+
+  updateStock(input: UpdateStockInput!): Stock
+    @field(resolver: "App\\GraphQL\\Mutations\\StockMutator@update")
+
+  deleteStock(id: ID!): Boolean
+    @field(resolver: "App\\GraphQL\\Mutations\\StockMutator@delete")
+}
+
+
+input CreateStockWithAutoLotInput {
+  entrepot_id: ID!
+  emballage_id: ID!
+  date_stock: DateTime!
+  quantite_init: Float
+  quantite_entree: Float
+  quantite_sortie: Float
+  user_id: ID
+}
+
+extend type Mutation {
+  createStockWithAutoLot(input: CreateStockWithAutoLotInput!): Stock
+    @field(resolver: "App\\GraphQL\\Mutations\\StockMutator@createWithAutoLot")
+}

@@ -1,0 +1,22 @@
+type Lot {
+  id: ID!
+  numero_lot: String!
+  date_production: Date
+  date_expiration: Date
+  quantite: Float
+  created_at: DateTime
+  updated_at: DateTime
+
+  stocks: [Stock!]! @hasMany
+}
+
+extend type Query {
+  lots: [Lot!]! @all
+  lot(id: ID! @eq): Lot @find
+}
+
+extend type Mutation {
+  createLot(numero_lot: String!, date_production: Date, date_expiration: Date, quantite: Float): Lot @create
+  updateLot(id: ID!, numero_lot: String, date_production: Date, date_expiration: Date, quantite: Float): Lot @update
+  deleteLot(id: ID!): Lot @delete
+}
