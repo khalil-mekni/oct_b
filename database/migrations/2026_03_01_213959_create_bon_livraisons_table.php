@@ -16,9 +16,10 @@ return new class extends Migration
     $table->string('numero_bl')->unique();
     $table->date('date_reception');
     $table->enum('statut', ['EN_ATTENTE','VALIDE'])->default('EN_ATTENTE');
-    $table->string('article_ref')->nullable();
+    $table->foreignId('emballage_id')->nullable()->constrained('emballages');
     $table->decimal('quantite_recue', 15,2)->nullable();
     $table->foreignId('commande_id')->constrained();
+    $table->string('numero_commande');
     $table->foreignId('entrepot_id')->constrained();
     $table->foreignId('receptionne_par')->constrained('users');
     $table->timestamps();

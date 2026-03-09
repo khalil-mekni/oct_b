@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::create('factures', function (Blueprint $table) {
     $table->id();
-    $table->string('numero_facture')->unique();
+    $table->string('numero_facture');
     $table->date('date_facture');
     $table->decimal('montant_ht', 15,2);
     $table->decimal('montant_ttc', 15,2);
     $table->enum('statut', ['BROUILLON','VALIDE','PAYE'])->default('BROUILLON');
-    $table->string('article_ref')->nullable();
+    $table->foreignId('emballage_id')->nullable()->constrained('emballages');
     $table->decimal('quantite_facturee', 15,2)->nullable();
     $table->foreignId('fournisseur_id')->constrained();
     $table->foreignId('contrat_id')->nullable()->constrained();

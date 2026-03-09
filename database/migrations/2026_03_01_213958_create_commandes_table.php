@@ -17,10 +17,11 @@ return new class extends Migration
     $table->date('date_commande');
     $table->date('date_livraison_prevue')->nullable();
     $table->enum('statut', ['BROUILLON','VALIDE','ANNULE','LIVRE'])->default('BROUILLON');
-    $table->string('article_ref')->nullable();
+    $table->foreignId('emballage_id')->nullable()->constrained('emballages');
     $table->decimal('quantite', 15,2)->nullable();
     $table->foreignId('fournisseur_id')->constrained();
     $table->foreignId('contrat_id')->nullable()->constrained();
+    $table->foreignId('entrepot_id')->constrained();
     $table->foreignId('created_by')->constrained('users');
     $table->timestamps();
 });

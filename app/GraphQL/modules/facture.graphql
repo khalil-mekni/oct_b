@@ -1,0 +1,58 @@
+type Facture {
+  id: ID!
+  numero_facture: String!
+  date_facture: DateTime!
+  montant_ht: Float!
+  montant_ttc: Float!
+  statut: String!
+  emballage_id: ID
+  quantite_facturee: Float
+
+  fournisseur_id: ID!
+  contrat_id: ID
+  commande_id: ID
+  bon_livraison_id: ID
+  valide_par: ID
+
+  created_at: DateTime!
+  updated_at: DateTime!
+}
+
+input CreateFactureInput {
+  numero_facture: String!
+  date_facture: DateTime!
+  montant_ht: Float!
+  emballage_id: ID!
+  quantite_facturee: Float!
+  commande_id: ID!
+  statut: String = "BROUILLON"
+}
+
+input UpdateFactureInput {
+  numero_facture: String
+  date_facture: DateTime
+  montant_ht: Float
+  emballage_id: ID
+  quantite_facturee: Float
+  commande_id: ID
+  statut: String
+}
+
+extend type Query {
+  factures: [Facture!]!
+    @paginate(model: "App\\Models\\Facture", defaultCount: 10)
+
+  facture(id: ID! @eq): Facture
+    @find(model: "App\\Models\\Facture")
+}
+
+extend type Mutation {
+  createFacture(input: CreateFactureInput!): Facture
+    @field(resolver: "App\\GraphQL\\Mutations\\FactureMutator@create")
+
+  updateFacture(id: ID!, input: UpdateFactureInput!): Facture
+    @field(resolver: "App\\GraphQL\\Mutations\\FactureMutator@update")
+
+  deleteFacture(id: ID!): Boolean!
+    @field(resolver: "App\\GraphQL\\Mutations\\FactureMutator@delete")
+}

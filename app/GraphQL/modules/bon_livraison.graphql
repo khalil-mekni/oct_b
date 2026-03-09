@@ -1,0 +1,53 @@
+type BonLivraison {
+  id: ID!
+  numero_bl: String!
+  date_reception: DateTime!
+  statut: String!
+
+  emballage_id: ID!
+  quantite_recue: Float!
+
+  numero_commande: String!
+  commande_id: ID!
+  entrepot_id: ID!
+
+  receptionne_par: ID!
+  created_at: DateTime!
+  updated_at: DateTime!
+}
+
+input CreateBonLivraisonInput {
+  date_reception: DateTime!
+  emballage_id: ID!
+  quantite_recue: Float!
+  numero_commande: String!
+  entrepot_id: ID!
+}
+
+input UpdateBonLivraisonInput {
+  date_reception: DateTime
+  emballage_id: ID
+  quantite_recue: Float
+  numero_commande: String
+  entrepot_id: ID
+  statut: String
+}
+
+extend type Query {
+  bonLivraisons: [BonLivraison!]!
+    @paginate(model: "App\\Models\\BonLivraison", defaultCount: 10)
+
+  bonLivraison(id: ID! @eq): BonLivraison
+    @find(model: "App\\Models\\BonLivraison")
+}
+
+extend type Mutation {
+  createBonLivraison(input: CreateBonLivraisonInput!): BonLivraison
+    @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@create")
+
+  updateBonLivraison(id: ID!, input: UpdateBonLivraisonInput!): BonLivraison
+    @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@update")
+
+  deleteBonLivraison(id: ID!): BonLivraison
+    @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@delete")
+}

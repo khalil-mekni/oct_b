@@ -4,3 +4,6 @@ scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date
 #import modules/stock.graphql
 #import modules/mouvement_stock.graphql
 #import modules/lot.graphql
+#import modules/commande.graphql
+#import modules/bon_livraison.graphql
+#import modules/facture.graphql

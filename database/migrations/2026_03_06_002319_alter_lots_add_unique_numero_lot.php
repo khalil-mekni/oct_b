@@ -9,14 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('lots', function (Blueprint $table) {
-    $table->string('numero_lot', 20)->change();
-});
+            $table->string('numero_lot', 20)->change();
+        });
     }
 
     public function down(): void
     {
         Schema::table('lots', function (Blueprint $table) {
-            $table->dropUnique(['numero_lot']);
+            $table->string('numero_lot', 191)->change();
         });
     }
 };
