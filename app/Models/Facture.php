@@ -22,7 +22,7 @@ class Facture extends Model
     ];
 
     protected $casts = [
-        'date_facture' => 'datetime',
+        'date_facture' => 'date',
     ];
 
     public function emballage()

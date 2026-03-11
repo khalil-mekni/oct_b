@@ -2,8 +2,8 @@ type Commande {
   id: ID!
 
   numero_commande: String!
-  date_commande: DateTime!
-  date_livraison_prevue: DateTime!
+  date_commande: Date!
+  date_livraison_prevue: Date!
 
   statut: String!
   emballage_id: ID!
@@ -19,7 +19,7 @@ type Commande {
 }
 
 input CreateCommandeInput {
-  date_livraison_prevue: DateTime!
+  date_livraison_prevue: Date!
   emballage_id: ID!
   quantite: Float!
   fournisseur_id: ID!
@@ -27,7 +27,7 @@ input CreateCommandeInput {
 }
 
 input UpdateCommandeInput {
-  date_livraison_prevue: DateTime
+  date_livraison_prevue: Date
   emballage_id: ID
   quantite: Float
   fournisseur_id: ID

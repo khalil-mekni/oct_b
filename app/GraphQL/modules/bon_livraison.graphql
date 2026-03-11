@@ -1,7 +1,7 @@
 type BonLivraison {
   id: ID!
   numero_bl: String!
-  date_reception: DateTime!
+  date_reception: Date!
   statut: String!
 
   emballage_id: ID!
@@ -17,7 +17,7 @@ type BonLivraison {
 }
 
 input CreateBonLivraisonInput {
-  date_reception: DateTime!
+  date_reception: Date!
   emballage_id: ID!
   quantite_recue: Float!
   numero_commande: String!
@@ -25,7 +25,7 @@ input CreateBonLivraisonInput {
 }
 
 input UpdateBonLivraisonInput {
-  date_reception: DateTime
+  date_reception: Date
   emballage_id: ID
   quantite_recue: Float
   numero_commande: String

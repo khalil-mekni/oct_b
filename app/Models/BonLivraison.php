@@ -12,14 +12,14 @@ class BonLivraison extends Model
         'statut',
         'emballage_id',
         'quantite_recue',
-        //'numero_commande',
+        'numero_commande',
         'commande_id',
         'entrepot_id',
         'receptionne_par',
     ];
 
     protected $casts = [
-        'date_reception' => 'datetime',
+        'date_reception' => 'date',
         'quantite_recue' => 'float',
     ];
 

@@ -1,7 +1,7 @@
 type Facture {
   id: ID!
   numero_facture: String!
-  date_facture: DateTime!
+  date_facture: Date!
   montant_ht: Float!
   montant_ttc: Float!
   statut: String!
@@ -20,7 +20,7 @@ type Facture {
 
 input CreateFactureInput {
   numero_facture: String!
-  date_facture: DateTime!
+  date_facture: Date!
   montant_ht: Float!
   emballage_id: ID!
   quantite_facturee: Float!
@@ -30,7 +30,7 @@ input CreateFactureInput {
 
 input UpdateFactureInput {
   numero_facture: String
-  date_facture: DateTime
+  date_facture: Date
   montant_ht: Float
   emballage_id: ID
   quantite_facturee: Float

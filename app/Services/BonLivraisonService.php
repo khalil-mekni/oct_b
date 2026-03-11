@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\BonLivraison;
 use App\Models\Commande;
+use App\Models\Contrat;
 use App\Models\Entrepot;
 use App\Models\Emballage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class BonLivraisonService
 {
@@ -100,9 +102,44 @@ class BonLivraisonService
             }
         }
 
-        $bonLivraison->update($data);
+        return DB::transaction(function () use ($bonLivraison, $data) {
+            $bonLivraison->update($data);
+            $bonLivraison->refresh();
 
-        return $bonLivraison->refresh();
+            if ($bonLivraison->statut === 'VALIDE') {
+                $commande = Commande::find($bonLivraison->commande_id);
+
+                if (!$commande) {
+                    throw new \InvalidArgumentException("Commande linked to bon de livraison not found.");
+                }
+
+                if ((float) $bonLivraison->quantite_recue > (float) $commande->quantite) {
+                    throw new \InvalidArgumentException("quantite_recue cannot be greater than commande quantite.");
+                }
+
+                if ((float) $bonLivraison->quantite_recue === (float) $commande->quantite) {
+                    $commande->update([
+                        'statut' => 'LIVREC',
+                    ]);
+                } elseif ((float) $bonLivraison->quantite_recue < (float) $commande->quantite) {
+                    $commande->update([
+                        'statut' => 'LIVREP',
+                    ]);
+                }
+
+                $contrat = Contrat::find($commande->contrat_id);
+
+                if (!$contrat) {
+                    throw new \InvalidArgumentException("Contrat linked to commande not found.");
+                }
+
+                $contrat->update([
+                    'quantite_realisee' => (float) $contrat->quantite_realisee + (float) $bonLivraison->quantite_recue,
+                ]);
+            }
+
+            return $bonLivraison->refresh();
+        });
     }
 
     public function delete(BonLivraison $bonLivraison): BonLivraison

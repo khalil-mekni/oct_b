@@ -25,7 +25,7 @@ return new class extends Migration
                   ->cascadeOnDelete();
 
             $table->decimal('quantite_recue', 15, 2)->nullable();
-
+            $table->string('numero_commande');
             $table->foreignId('commande_id')
                   ->constrained()
                   ->cascadeOnDelete();

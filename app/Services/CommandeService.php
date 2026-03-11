@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class CommandeService
 {
-    private const STATUTS = ['BROUILLON','VALIDEE','EN_ATTENTE_BL','RECEPTIONNEE','ANNULEE'];
+    private const STATUTS = ['BROUILLON','VALIDEE','ANNULEE','LIVREP','LIVREC'];
 
     public function create(array $data): Commande
     {
@@ -35,6 +35,7 @@ class CommandeService
 
         $contrat = Contrat::query()
             ->where('fournisseur_id', $data['fournisseur_id'])
+            ->where('statut', 'ACTIF')
             ->latest('id')
             ->first();
 
@@ -54,8 +55,9 @@ class CommandeService
                 'receptionne_par' => 1,
                 'statut'          => 'EN_ATTENTE',
                 'commande_id'     => $commande->id,
-              //  'numero_commande' => $commande->numero_commande,
+                'numero_commande' => $commande->numero_commande,
                 'emballage_id'    => $commande->emballage_id,
+                'quantite_recue'  => $commande->quantite,
             ]);
 
             return $commande;
@@ -64,15 +66,9 @@ class CommandeService
 
     public function update(Commande $commande, array $data): Commande
     {
-        if ($commande->statut !== 'BROUILLON') {
-            unset(
-                $data['emballage_id'],
-                $data['quantite'],
-                $data['fournisseur_id'],
-                $data['contrat_id'],
-                $data['date_livraison_prevue'],
-                $data['entrepot_id']
-            );
+        if ($commande->statut === 'LIVREC') {
+            throw new \InvalidArgumentException("Cannot update a LIVREC commande.");
+            
         }
 
         if (isset($data['statut'])) {
@@ -94,6 +90,9 @@ class CommandeService
 
     public function cancel(Commande $commande): Commande
     {
+        if ($commande->statut !== 'VALIDEE') {
+            throw new \InvalidArgumentException("Cannot cancel a delivered commande.");
+            }
         $commande->update(['statut' => 'ANNULEE']);
         return $commande->refresh();
     }

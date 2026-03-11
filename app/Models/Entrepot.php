@@ -10,7 +10,7 @@ class Entrepot extends Model
 
     protected $fillable = [
         'nom',       
-         'adresse',
+        'adresse',
 
         'capacite_totale',
         'capacite_disponible',
