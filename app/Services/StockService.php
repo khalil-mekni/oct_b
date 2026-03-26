@@ -2,200 +2,149 @@
 
 namespace App\Services;
 
-use App\Models\Lot;
 use App\Models\Stock;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class StockService
 {
-    public function applyLotToStocks(Lot $lot, array $context = []): array
-    {
-        $entrepotId = $context['entrepot_id'] ?? null;
-        $sens = $context['sens'] ?? 'entree';
-
-        if (!$entrepotId) {
-            throw new RuntimeException("entrepot_id est requis pour créer le mouvement de stock.");
-        }
-
-        if (!in_array($sens, ['entree', 'sortie'], true)) {
-            throw new RuntimeException("sens invalide. Valeurs autorisées : entree, sortie.");
-        }
-
-        $ts = Carbon::parse($lot->date_mvt);
-
-        $stock = $this->applySnapshot(
-            $entrepotId,
-            $lot->emballage_id,
-            $ts,
-            $lot->id,
-            $lot->user_id,
-            (float) $lot->quantite,
-            $sens
-        );
-
-        return [$stock];
-    }
-
-    private function applySnapshot(
+    public function createHistoryLine(
         int $entrepotId,
         int $emballageId,
-        Carbon $at,
-        int $lotId,
-        ?int $userId,
-        float $qte,
-        string $sens
+        ?int $lotId,
+        string|\DateTimeInterface $dateStock,
+        float $quantite,
+        string $sens,
+        ?int $userId = null
     ): Stock {
+        if ($quantite <= 0) {
+            throw new RuntimeException("La quantité doit être supérieure à 0.");
+        }
+
+        if (!in_array($sens, ['E', 'S'], true)) {
+            throw new RuntimeException("Sens invalide. Valeurs autorisées : E ou S.");
+        }
+
+        $dateStock = Carbon::parse($dateStock);
+
         return DB::transaction(function () use (
             $entrepotId,
             $emballageId,
-            $at,
             $lotId,
-            $userId,
-            $qte,
-            $sens
+            $dateStock,
+            $quantite,
+            $sens,
+            $userId
         ) {
-            $lastFinale = Stock::where('entrepot_id', $entrepotId)
+            $lastStock = Stock::query()
+                ->where('entrepot_id', $entrepotId)
                 ->where('emballage_id', $emballageId)
-                ->where('date_stock', '<=', $at)
+                ->when(
+                    $lotId !== null,
+                    fn ($query) => $query->where('lot_id', $lotId),
+                    fn ($query) => $query->whereNull('lot_id')
+                )
+                ->where('date_stock', '<=', $dateStock)
                 ->orderByDesc('date_stock')
                 ->orderByDesc('id')
                 ->lockForUpdate()
-                ->value('quantite_finale');
+                ->first();
 
-            $init = $lastFinale ? (float) $lastFinale : 0;
+            $quantiteInit = $lastStock ? (float) $lastStock->quantite_finale : 0.0;
 
-            $finale = match ($sens) {
-                'entree' => $init + $qte,
-                'sortie' => $init - $qte,
-                default => throw new RuntimeException("sens non supporté"),
+            $quantiteFinale = match ($sens) {
+                'E' => $quantiteInit + $quantite,
+                'S' => $quantiteInit - $quantite,
+                default => throw new RuntimeException("Sens invalide."),
             };
 
-            if ($finale < 0) {
-                throw new RuntimeException("Stock insuffisant.");
+            if ($quantiteFinale < 0) {
+                throw new RuntimeException("Stock insuffisant pour créer la ligne d'historique.");
             }
 
             return Stock::create([
                 'entrepot_id' => $entrepotId,
                 'emballage_id' => $emballageId,
                 'lot_id' => $lotId,
-                'date_stock' => $at,
-                'quantite_init' => $init,
-                'qte' => $qte,
+                'date_stock' => $dateStock,
+                'quantite_init' => $quantiteInit,
+                'quantite' => $quantite,
                 'sens' => $sens,
-                'quantite_finale' => $finale,
+                'quantite_finale' => $quantiteFinale,
                 'user_id' => $userId,
             ]);
         });
     }
 
-    public function getTheoriqueAt(int $entrepotId, int $emballageId, string $dateTime): float
-    {
+    public function getTheoriqueAt(
+        int $entrepotId,
+        int $emballageId,
+        ?int $lotId,
+        string|\DateTimeInterface $dateTime
+    ): float {
         $dt = Carbon::parse($dateTime);
 
-        $finale = Stock::where('entrepot_id', $entrepotId)
+        $finale = Stock::query()
+            ->where('entrepot_id', $entrepotId)
             ->where('emballage_id', $emballageId)
+            ->when(
+                $lotId !== null,
+                fn ($query) => $query->where('lot_id', $lotId),
+                fn ($query) => $query->whereNull('lot_id')
+            )
             ->where('date_stock', '<=', $dt)
             ->orderByDesc('date_stock')
             ->orderByDesc('id')
             ->value('quantite_finale');
 
-        return $finale ? (float) $finale : 0;
+        return $finale !== null ? (float) $finale : 0.0;
     }
 
-    public function updateStockFromLotChange(Lot $oldLot, Lot $newLot, array $context = []): void
-    {
-        $this->deleteStocksByLot($oldLot);
-        $this->applyLotToStocks($newLot, $context);
+    public function getDisponibleAt(
+        int $entrepotId,
+        int $emballageId,
+        ?int $lotId = null
+    ): float {
+        $finale = Stock::query()
+            ->where('entrepot_id', $entrepotId)
+            ->where('emballage_id', $emballageId)
+            ->when(
+                $lotId !== null,
+                fn ($query) => $query->where('lot_id', $lotId),
+                fn ($query) => $query->whereNull('lot_id')
+            )
+            ->orderByDesc('date_stock')
+            ->orderByDesc('id')
+            ->value('quantite_finale');
 
-        $entrepotId = $context['entrepot_id'] ?? null;
-        if ($entrepotId) {
-            $oldDate = Carbon::parse($oldLot->date_mvt);
-            $newDate = Carbon::parse($newLot->date_mvt);
-            $rebuildFrom = $oldDate->lt($newDate) ? $oldDate : $newDate;
-
-            $this->rebuildStockTimeline(
-                $entrepotId,
-                $newLot->emballage_id,
-                $rebuildFrom
-            );
-        }
+        return $finale !== null ? (float) $finale : 0.0;
     }
 
-    public function removeStocksFromLot(Lot $lot): void
+    public function deleteStocksByLot(int $lotId): void
     {
-        $this->deleteStocksByLot($lot);
+        Stock::query()
+            ->where('lot_id', $lotId)
+            ->delete();
     }
 
-    public function getImpactedScopes(Lot $lot, array $context = []): array
-    {
-        $scopes = Stock::where('lot_id', $lot->id)
-            ->get(['entrepot_id', 'emballage_id'])
-            ->map(fn ($stock) => [
-                'entrepot_id' => $stock->entrepot_id,
-                'emballage_id' => $stock->emballage_id,
-            ])
-            ->unique(fn ($s) => $s['entrepot_id'] . '-' . $s['emballage_id'])
-            ->values()
-            ->all();
-
-        if (!empty($scopes)) {
-            return $scopes;
-        }
-
-        if (!empty($context['entrepot_id'])) {
-            return [[
-                'entrepot_id' => $context['entrepot_id'],
-                'emballage_id' => $lot->emballage_id,
-            ]];
-        }
-
-        return [];
-    }
-
-    public function rebuildStockTimeline(int $entrepotId, int $emballageId, Carbon $fromDate): void
-    {
-        DB::transaction(function () use ($entrepotId, $emballageId, $fromDate) {
-            $previousStock = Stock::where('entrepot_id', $entrepotId)
-                ->where('emballage_id', $emballageId)
-                ->where('date_stock', '<', $fromDate)
-                ->orderBy('date_stock', 'desc')
-                ->orderBy('id', 'desc')
-                ->first();
-
-            $runningFinale = $previousStock ? (float) $previousStock->quantite_finale : 0;
-
-            $stocks = Stock::where('entrepot_id', $entrepotId)
-                ->where('emballage_id', $emballageId)
-                ->where('date_stock', '>=', $fromDate)
-                ->orderBy('date_stock', 'asc')
-                ->orderBy('id', 'asc')
-                ->lockForUpdate()
-                ->get();
-
-            foreach ($stocks as $stock) {
-                $stock->quantite_init = $runningFinale;
-
-                $stock->quantite_finale = match ($stock->sens) {
-                    'entree' => $runningFinale + (float) $stock->qte,
-                    'sortie' => $runningFinale - (float) $stock->qte,
-                    default => throw new RuntimeException("sens invalide lors du recalcul."),
-                };
-
-                if ($stock->quantite_finale < 0) {
-                    throw new RuntimeException("Stock insuffisant lors du recalcul.");
-                }
-
-                $stock->save();
-
-                $runningFinale = (float) $stock->quantite_finale;
-            }
-        });
-    }
-
-    public function deleteStocksByLot(Lot $lot): void
-    {
-        Stock::where('lot_id', $lot->id)->delete();
+    public function history(
+        ?int $entrepotId = null,
+        ?int $emballageId = null,
+        ?int $lotId = null,
+        ?string $from = null,
+        ?string $to = null
+    ): Collection {
+        return Stock::query()
+            ->with(['entrepot', 'emballage', 'lot', 'user'])
+            ->when($entrepotId !== null, fn ($query) => $query->where('entrepot_id', $entrepotId))
+            ->when($emballageId !== null, fn ($query) => $query->where('emballage_id', $emballageId))
+            ->when($lotId !== null, fn ($query) => $query->where('lot_id', $lotId))
+            ->when($from !== null, fn ($query) => $query->where('date_stock', '>=', Carbon::parse($from)))
+            ->when($to !== null, fn ($query) => $query->where('date_stock', '<=', Carbon::parse($to)))
+            ->orderByDesc('date_stock')
+            ->orderByDesc('id')
+            ->get();
     }
 }

@@ -10,13 +10,14 @@ type Lot {
 
   emballage: Emballage @belongsTo
   user: User @belongsTo
+  stocks: [Stock!]! @hasMany
 
   created_at: DateTime
   updated_at: DateTime
 }
 
 input LotCreateInput {
-  code_lot: String!
+  code_lot: String
   emballage_id: ID!
   quantite: Float!
   entrepot_id: ID!
@@ -38,8 +39,10 @@ input LotUpdateInput {
 }
 
 extend type Query {
-  lots: [Lot!]! @paginate(defaultCount: 10)
-  lot(id: ID! @eq): Lot @find
+  lots: [Lot!]! @paginate(model: "App\\Models\\Lot", defaultCount: 10)
+
+  lot(id: ID! @eq): Lot
+    @find(model: "App\\Models\\Lot")
 }
 
 extend type Mutation {

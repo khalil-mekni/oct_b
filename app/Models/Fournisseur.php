@@ -15,11 +15,20 @@ class Fournisseur extends Model
     protected $fillable = [
         'raison_sociale',
         'matricule_fiscale',
+            'logo',
         'telephone',
         'adresse',
         'statut',
+         'latitude',
+        'longitude',
+        'adresse_geocodee',
+        'geocoded_at',
     ];
-
+protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'geocoded_at' => 'datetime',
+    ];
     public function contrats()
 {
     return $this->hasMany(Contrat::class, 'fournisseur_id');

@@ -14,6 +14,10 @@ type Commande {
   entrepot_id: ID!
   created_by: ID!
 
+  quantite_recue_total: Float!
+  reste: Float!
+  bon_livraisons: [BonLivraison!]! @hasMany
+
   created_at: DateTime!
   updated_at: DateTime!
 }

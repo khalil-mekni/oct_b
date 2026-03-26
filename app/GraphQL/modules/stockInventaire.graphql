@@ -5,6 +5,8 @@ input CreateStockInventaireInput {
   stock_physique: Float!
   user_id: ID
   date_inventaire: DateTime!
+  periode_debut: DateTime
+  periode_fin: DateTime
 }
 
 "Mise à jour"
@@ -12,6 +14,8 @@ input UpdateStockInventaireInput {
   stock_physique: Float
   user_id: ID
   date_inventaire: DateTime
+  periode_debut: DateTime
+  periode_fin: DateTime
 }
 
 type StockInventaire {
@@ -23,6 +27,8 @@ type StockInventaire {
   ecart: Float!
   user_id: ID
   date_inventaire: DateTime!
+  periode_debut: DateTime
+  periode_fin: DateTime
   created_at: DateTime
   updated_at: DateTime
 

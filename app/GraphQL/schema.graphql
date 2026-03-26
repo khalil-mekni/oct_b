@@ -17,3 +17,5 @@ type Mutation
 #import modules/commande.graphql
 #import modules/bon_livraison.graphql
 #import modules/facture.graphql
+#import modules/Alert.graphql
+

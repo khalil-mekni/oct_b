@@ -6,7 +6,9 @@ use App\Services\LotService;
 
 class LotMutation
 {
-    public function __construct(private LotService $lotService) {}
+    public function __construct(
+        private LotService $lotService
+    ) {}
 
     public function create($_, array $args)
     {
@@ -15,7 +17,7 @@ class LotMutation
 
     public function update($_, array $args)
     {
-        return $this->lotService->updateLotWithHistory(
+        return $this->lotService->updateLot(
             (int) $args['id'],
             $args['input']
         );

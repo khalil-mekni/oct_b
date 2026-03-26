@@ -4,10 +4,10 @@ type Stock {
   emballage_id: ID!
   lot_id: ID
   date_stock: DateTime!
-  quantite_init: Float!
-  qte: Float!
-  sens: StockSens!
-  quantite_finale: Float!
+  quantite_init: Float
+  quantite: Float!
+  sens: String!
+  quantite_finale: Float
   user_id: ID
 
   entrepot: Entrepot @belongsTo
@@ -19,24 +19,49 @@ type Stock {
   updated_at: DateTime
 }
 
-enum StockSens {
-  entree
-  sortie
+type EntrepotLot {
+  id: ID!
+  quantite: Float!
+  entrepot: Entrepot! @belongsTo
+  lot: Lot! @belongsTo
+  emballage: Emballage! @belongsTo
+  created_at: DateTime
+  updated_at: DateTime
 }
 
 extend type Query {
   stockHistory(
-    entrepot_id: ID!
-    emballage_id: ID!
-    from: DateTime!
-    to: DateTime!
+    entrepot_id: ID
+    emballage_id: ID
+    lot_id: ID
+    from: DateTime
+    to: DateTime
   ): [Stock!]!
     @field(resolver: "App\\GraphQL\\Queries\\StockQuery@history")
 
   stockTheoriqueAt(
     entrepot_id: ID!
     emballage_id: ID!
+    lot_id: ID
     at: DateTime!
   ): Float!
     @field(resolver: "App\\GraphQL\\Queries\\StockQuery@theoriqueAt")
+
+  availableLotsByEntrepot(
+    entrepot_id: ID!
+    emballage_id: ID
+  ): [EntrepotLot!]!
+    @field(resolver: "App\\GraphQL\\Queries\\StockQuery@availableLotsByEntrepot")
+
+  availableEntrepotsByLot(
+    lot_id: ID!
+  ): [EntrepotLot!]!
+    @field(resolver: "App\\GraphQL\\Queries\\StockQuery@availableEntrepotsByLot")
+
+  lotDisponibleDansEntrepot(
+    entrepot_id: ID!
+    lot_id: ID!
+    emballage_id: ID!
+  ): Float!
+    @field(resolver: "App\\GraphQL\\Queries\\StockQuery@lotDisponibleDansEntrepot")
 }

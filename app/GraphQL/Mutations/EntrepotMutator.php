@@ -3,29 +3,58 @@
 namespace App\GraphQL\Mutations;
 
 use App\Models\Entrepot;
-use App\Services\EntrepotService;
+use RuntimeException;
 
 class EntrepotMutator
 {
-    public function __construct(private EntrepotService $service) {}
-
-    public function create($root, array $args): Entrepot
+    public function create($_, array $args): Entrepot
     {
-        return $this->service->create($args['input']);
+        $input = $args['input'];
+
+        $capaciteTotale = (float) $input['capacite_totale'];
+
+        if ($capaciteTotale < 0) {
+            throw new RuntimeException("La capacité totale doit être supérieure ou égale à 0.");
+        }
+
+        return Entrepot::create([
+            'nom' => $input['nom'],
+            'adresse' => $input['adresse'] ?? null,
+            'capacite_totale' => $capaciteTotale,
+            'stock_existant' => 0,
+            'capacite_disponible' => $capaciteTotale,
+            'statut' => $input['statut'] ?? 'ACTIVE',
+        ])->refresh();
     }
 
-    public function update($root, array $args): Entrepot
+    public function update($_, array $args): Entrepot
     {
-        $data = $args['input'];
-        $entrepot = Entrepot::findOrFail($data['id']);
-        unset($data['id']);
+        $input = $args['input'];
 
-        return $this->service->update($entrepot, $data);
-    }
+        $entrepot = Entrepot::findOrFail($input['id']);
 
-    public function delete($root, array $args): bool
-    {
-        $entrepot = Entrepot::findOrFail($args['id']);
-        return $this->service->delete($entrepot);
+        $data = [
+            'nom' => $input['nom'] ?? $entrepot->nom,
+            'adresse' => $input['adresse'] ?? $entrepot->adresse,
+            'statut' => $input['statut'] ?? $entrepot->statut,
+        ];
+
+        if (isset($input['capacite_totale'])) {
+            $nouvelleCapaciteTotale = (float) $input['capacite_totale'];
+            $stockExistant = (float) $entrepot->stock_existant;
+
+            if ($nouvelleCapaciteTotale < $stockExistant) {
+                throw new RuntimeException(
+                    "La capacité totale ne peut pas être inférieure au stock existant."
+                );
+            }
+
+            $data['capacite_totale'] = $nouvelleCapaciteTotale;
+            $data['capacite_disponible'] = $nouvelleCapaciteTotale - $stockExistant;
+        }
+
+        $entrepot->update($data);
+
+        return $entrepot->refresh();
     }
 }

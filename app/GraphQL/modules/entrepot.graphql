@@ -1,37 +1,51 @@
 type Entrepot {
   id: ID!
-    nom: String!
-
-  adresse: String!
+  nom: String!
+  adresse: String
   capacite_totale: Float
+  stock_existant: Float
   capacite_disponible: Float
-  statut: String!
+  statut: String
+
+  entrepotLots: [EntrepotLot!]! @hasMany
+
+  created_at: DateTime
+  updated_at: DateTime
+}
+
+type EntrepotLot {
+  id: ID!
+  quantite: Float!
+
+  entrepot: Entrepot! @belongsTo
+  lot: Lot! @belongsTo
+  emballage: Emballage! @belongsTo
+
   created_at: DateTime
   updated_at: DateTime
 }
 
 input CreateEntrepotInput {
-      nom: String!
-
-  adresse: String!
-  capacite_totale: Float
-  capacite_disponible: Float
+  nom: String!
+  adresse: String
+  capacite_totale: Float!
   statut: String
 }
 
 input UpdateEntrepotInput {
-      nom: String!
-
   id: ID!
+  nom: String
   adresse: String
   capacite_totale: Float
-  capacite_disponible: Float
   statut: String
 }
 
 extend type Query {
-  entrepots: [Entrepot!]! @all
-  entrepot(id: ID! @eq): Entrepot @find
+  entrepots: [Entrepot!]!
+    @all(model: "App\\Models\\Entrepot")
+
+  entrepot(id: ID! @eq): Entrepot
+    @find(model: "App\\Models\\Entrepot")
 }
 
 extend type Mutation {
@@ -42,5 +56,5 @@ extend type Mutation {
     @field(resolver: "App\\GraphQL\\Mutations\\EntrepotMutator@update")
 
   deleteEntrepot(id: ID!): Boolean
-    @field(resolver: "App\\GraphQL\\Mutations\\EntrepotMutator@delete")
+    @delete(model: "App\\Models\\Entrepot")
 }

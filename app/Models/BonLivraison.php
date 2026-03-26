@@ -16,6 +16,9 @@ class BonLivraison extends Model
         'commande_id',
         'entrepot_id',
         'receptionne_par',
+          'document_bl',
+    'date_validation',
+    'validated_by'
     ];
 
     protected $casts = [

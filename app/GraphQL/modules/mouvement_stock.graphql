@@ -16,7 +16,6 @@ type MouvementStock {
   code_mouvement: String
   type_mouvement: MouvementType!
   emballage_id: ID!
-emballage: Emballage @belongsTo
   lot_id: ID
   entrepot_source_id: ID
   entrepot_destination_id: ID
@@ -25,9 +24,10 @@ emballage: Emballage @belongsTo
   user_id: ID
   statut: MouvementStatut!
 
+  emballage: Emballage @belongsTo
   lot: Lot @belongsTo
-  entrepotSource: Entrepot @belongsTo
-  entrepotDestination: Entrepot @belongsTo
+  entrepotSource: Entrepot @belongsTo(relation: "entrepotSource")
+  entrepotDestination: Entrepot @belongsTo(relation: "entrepotDestination")
   user: User @belongsTo
 }
 
@@ -46,8 +46,11 @@ input ValidateMouvementInput {
 }
 
 extend type Query {
-  mouvementStocks: [MouvementStock!]! @paginate
-  mouvementStock(id: ID! @eq): MouvementStock @find
+  mouvementStocks: [MouvementStock!]!
+    @paginate(model: "App\\Models\\MouvementStock", defaultCount: 10)
+
+  mouvementStock(id: ID! @eq): MouvementStock
+    @find(model: "App\\Models\\MouvementStock")
 }
 
 extend type Mutation {

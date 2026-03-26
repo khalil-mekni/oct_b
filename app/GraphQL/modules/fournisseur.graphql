@@ -6,28 +6,47 @@ enum StatutFournisseur {
 type Fournisseur {
   id: ID!
   raison_sociale: String!
+  logo: String
   matricule_fiscale: String!
   telephone: String
   adresse: String
   statut: StatutFournisseur!
+
+  latitude: Float
+  longitude: Float
+  adresse_geocodee: String
+  geocoded_at: DateTime
+
   created_at: DateTime
   updated_at: DateTime
 }
 
 input FournisseurCreateInput {
+    logo: String
   raison_sociale: String!
   matricule_fiscale: String!
   telephone: String
   adresse: String
   statut: StatutFournisseur = ACTIF
+
+  latitude: Float
+  longitude: Float
+  adresse_geocodee: String
+
 }
 
 input FournisseurUpdateInput {
+    logo: String
+
   raison_sociale: String
   matricule_fiscale: String
   telephone: String
   adresse: String
   statut: StatutFournisseur
+
+   latitude: Float
+  longitude: Float
+  adresse_geocodee: String
 }
 
 extend type Query {
@@ -36,6 +55,9 @@ extend type Query {
 
   fournisseur(id: ID!): Fournisseur
     @field(resolver: "App\\GraphQL\\Mutations\\FournisseurMutator@find")
+
+  fournisseursMap: [Fournisseur!]!
+    @field(resolver: "App\\GraphQL\\Queries\\FournisseurQuery@map")  
 }
 
 extend type Mutation {

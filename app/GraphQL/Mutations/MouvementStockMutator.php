@@ -7,7 +7,9 @@ use App\Services\MouvementStockService;
 
 class MouvementStockMutator
 {
-    public function __construct(private MouvementStockService $service) {}
+    public function __construct(
+        private MouvementStockService $service
+    ) {}
 
     public function createDraft($_, array $args): MouvementStock
     {
@@ -16,13 +18,15 @@ class MouvementStockMutator
 
     public function validate($_, array $args): MouvementStock
     {
-        $m = MouvementStock::findOrFail($args['input']['id']);
-        return $this->service->validateMovement($m);
+        $mouvement = MouvementStock::findOrFail($args['input']['id']);
+
+        return $this->service->validateMovement($mouvement);
     }
 
     public function deleteDraft($_, array $args): bool
     {
-        $m = MouvementStock::findOrFail($args['id']);
-        return $this->service->deleteDraft($m);
+        $mouvement = MouvementStock::findOrFail($args['id']);
+
+        return $this->service->deleteDraft($mouvement);
     }
 }

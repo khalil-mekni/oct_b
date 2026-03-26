@@ -12,6 +12,12 @@ type BonLivraison {
   entrepot_id: ID!
 
   receptionne_par: ID!
+
+  document_bl: String
+  date_validation: DateTime
+  validated_by: ID
+
+
   created_at: DateTime!
   updated_at: DateTime!
 }
@@ -22,6 +28,7 @@ input CreateBonLivraisonInput {
   quantite_recue: Float!
   numero_commande: String!
   entrepot_id: ID!
+  document_bl: Upload!
 }
 
 input UpdateBonLivraisonInput {
@@ -42,11 +49,18 @@ extend type Query {
 }
 
 extend type Mutation {
-  createBonLivraison(input: CreateBonLivraisonInput!): BonLivraison
+createBonLivraison(
+  input: CreateBonLivraisonInput!
+  document_bl: Upload!
+): BonLivraison
     @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@create")
 
   updateBonLivraison(id: ID!, input: UpdateBonLivraisonInput!): BonLivraison
     @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@update")
+
+
+  validateBonLivraison(id: ID!, document_bl: Upload!): BonLivraison
+    @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@validate")
 
   deleteBonLivraison(id: ID!): BonLivraison
     @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@delete")

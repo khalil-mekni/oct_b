@@ -8,40 +8,37 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Lot extends Model
 {
-    protected $table = 'lots';
-
     protected $fillable = [
         'code_lot',
         'emballage_id',
         'quantite',
-        'user_id',
         'date_mvt',
+        'user_id',
         'commentaire',
     ];
 
     protected $casts = [
-        'quantite' => 'decimal:2',
+        'quantite' => 'float',
         'date_mvt' => 'datetime',
     ];
 
     public function emballage(): BelongsTo
     {
-        return $this->belongsTo(Emballage::class, 'emballage_id');
+        return $this->belongsTo(Emballage::class);
     }
-
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
     public function stocks(): HasMany
     {
-        return $this->hasMany(Stock::class, 'lot_id');
+        return $this->hasMany(Stock::class);
     }
 
-    public function stockInventaires(): HasMany
+    public function entrepotLots(): HasMany
     {
-        return $this->hasMany(StockInventaire::class, 'lot_id');
+        return $this->hasMany(EntrepotLot::class);
     }
 }

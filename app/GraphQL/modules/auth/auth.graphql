@@ -4,15 +4,12 @@ type AuthPayload {
 }
 
 extend type Query {
-
-      me: User 
-      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@me") 
-      @guard
-
+    me: User
+        @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@me")
+        @guard
 }
 
 extend type Mutation {
-
     login(
         email: String!
         password: String!
@@ -32,9 +29,20 @@ extend type Mutation {
         @auth
 
     verifyEmail(token: String!): String!
-
+        @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@verifyEmail")
 
     logout: Boolean
         @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@logout")
         @auth
+
+    forgotPassword(email: String!): String!
+        @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@forgotPassword")
+
+    resetPassword(
+        email: String!
+        token: String!
+        password: String!
+        password_confirmation: String!
+    ): String!
+        @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@resetPassword")
 }

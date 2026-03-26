@@ -3,22 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Entrepot extends Model
 {
-    protected $table = 'entrepots';
-
     protected $fillable = [
-        'nom',       
-         'adresse',
-
+        'nom',
+        'adresse',
         'capacite_totale',
+        'stock_existant',
         'capacite_disponible',
         'statut',
     ];
 
-    public function stocks()
+    protected $casts = [
+        'capacite_totale' => 'float',
+        'stock_existant' => 'float',
+        'capacite_disponible' => 'float',
+    ];
+
+    public function entrepotLots(): HasMany
     {
-        return $this->hasMany(Stock::class, 'entrepot_id');
+        return $this->hasMany(EntrepotLot::class);
     }
 }
