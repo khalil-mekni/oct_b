@@ -1,0 +1,54 @@
+type Lot {
+  id: ID!
+  code_lot: String!
+  quantite: Float!
+  date_mvt: DateTime!
+  commentaire: String
+
+  emballage_id: ID!
+  user_id: ID
+
+  emballage: Emballage @belongsTo
+  user: User @belongsTo
+
+  created_at: DateTime
+  updated_at: DateTime
+}
+
+input LotCreateInput {
+  code_lot: String!
+  emballage_id: ID!
+  quantite: Float!
+  entrepot_id: ID!
+  sens: String
+  date_mvt: DateTime!
+  commentaire: String
+  user_id: ID
+}
+
+input LotUpdateInput {
+  code_lot: String
+  emballage_id: ID
+  quantite: Float
+  entrepot_id: ID
+  sens: String
+  date_mvt: DateTime
+  commentaire: String
+  user_id: ID
+}
+
+extend type Query {
+  lots: [Lot!]! @paginate(defaultCount: 10)
+  lot(id: ID! @eq): Lot @find
+}
+
+extend type Mutation {
+  createLot(input: LotCreateInput!): Lot
+    @field(resolver: "App\\GraphQL\\Mutations\\LotMutation@create")
+
+  updateLot(id: ID!, input: LotUpdateInput!): Lot
+    @field(resolver: "App\\GraphQL\\Mutations\\LotMutation@update")
+
+  deleteLot(id: ID!): Lot
+    @field(resolver: "App\\GraphQL\\Mutations\\LotMutation@delete")
+}

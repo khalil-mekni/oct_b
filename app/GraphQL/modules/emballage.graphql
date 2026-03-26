@@ -1,0 +1,56 @@
+type Emballage {
+  id: ID!
+  code: String!
+  name: String!
+  type: String!
+  capacity_value: Float
+  capacity_unit: String
+  material: String
+  status: String!
+  created_at: DateTime!
+  updated_at: DateTime!
+}
+
+input CreateEmballageInput {
+  code: String!
+  name: String!
+  type: String!
+  capacity_value: Float
+  capacity_unit: String
+  material: String
+  status: String = "ACTIVE"
+}
+
+input UpdateEmballageInput {
+  name: String
+  type: String
+  capacity_value: Float
+  capacity_unit: String
+  material: String
+  status: String
+}
+
+extend type Query {
+  emballages: [Emballage!]!
+    @paginate(model: "App\\Models\\Emballage", defaultCount: 10)
+
+  emballage(id: ID! @eq): Emballage
+    @find(model: "App\\Models\\Emballage")
+}
+
+extend type Mutation {
+  createEmballage(input: CreateEmballageInput!): Emballage
+    @field(resolver: "App\\GraphQL\\Mutations\\EmbballageMutator@create")
+
+  updateEmballage(id: ID!, input: UpdateEmballageInput!): Emballage
+    @field(resolver: "App\\GraphQL\\Mutations\\EmbballageMutator@update")
+
+  deleteEmballage(id: ID!): Emballage
+    @field(resolver: "App\\GraphQL\\Mutations\\EmbballageMutator@delete")
+
+  restoreEmballage(id: ID!): Emballage
+    @field(resolver: "App\\GraphQL\\Mutations\\EmbballageMutator@restore")
+
+  forceDeleteEmballage(id: ID!): Boolean!
+    @field(resolver: "App\\GraphQL\\Mutations\\EmbballageMutator@forceDelete")
+}

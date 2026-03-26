@@ -1,0 +1,61 @@
+type Commande {
+  id: ID!
+
+  numero_commande: String!
+  date_commande: Date!
+  date_livraison_prevue: Date!
+
+  statut: String!
+  emballage_id: ID!
+  quantite: Float!
+
+  fournisseur_id: ID!
+  contrat_id: ID!
+  entrepot_id: ID!
+  created_by: ID!
+
+  quantite_recue_total: Float!
+  reste: Float!
+  bon_livraisons: [BonLivraison!]! @hasMany
+
+  created_at: DateTime!
+  updated_at: DateTime!
+}
+
+input CreateCommandeInput {
+  date_livraison_prevue: Date!
+  emballage_id: ID!
+  quantite: Float!
+  fournisseur_id: ID!
+  entrepot_id: ID!
+}
+
+input UpdateCommandeInput {
+  date_livraison_prevue: Date
+  emballage_id: ID
+  quantite: Float
+  fournisseur_id: ID
+  entrepot_id: ID
+  statut: String
+}
+
+extend type Query {
+  commandes: [Commande!]!
+    @paginate(model: "App\\Models\\Commande", defaultCount: 10)
+
+  commande(id: ID! @eq): Commande
+    @find(model: "App\\Models\\Commande")
+}
+
+extend type Mutation {
+  createCommande(input: CreateCommandeInput!): Commande
+    @field(resolver: "App\\GraphQL\\Mutations\\CommandeMutator@create")
+
+  updateCommande(id: ID!, input: UpdateCommandeInput!): Commande
+    @field(resolver: "App\\GraphQL\\Mutations\\CommandeMutator@update")
+
+  cancelCommande(id: ID!): Commande
+    @field(resolver: "App\\GraphQL\\Mutations\\CommandeMutator@cancel")
+  dropCommande(id: ID!): Boolean!
+    @field(resolver: "App\\GraphQL\\Mutations\\CommandeMutator@drop")
+}

@@ -1,0 +1,71 @@
+"""
+Enums
+"""
+enum StatutContrat {
+  ACTIF
+  EXPIRE
+  SUSPENDU
+}
+
+"""
+Types
+"""
+type Contrat {
+  id: ID!
+  numero_contrat: String!
+  date_debut: Date!
+  date_fin: Date!
+  quantite_contractuelle: Float!
+  taux_depassement_autorise: Float!
+  quantite_realisee: Float!
+  prix: Float!
+  statut: StatutContrat!
+  fournisseur_id: ID!
+  emballage_id: ID!
+  fournisseur: Fournisseur! @belongsTo
+  emballage: Emballage! @belongsTo
+  created_at: DateTime
+  updated_at: DateTime
+}
+
+"""
+Inputs
+"""
+input CreateContratInput {
+  numero_contrat: String!
+  date_debut: Date!
+  date_fin: Date!
+  quantite_contractuelle: Float!
+  taux_depassement_autorise: Float = 0.20
+  quantite_realisee: Float = 0.00
+  prix: Float!
+  statut: StatutContrat = ACTIF
+
+  fournisseur_id: ID!
+  emballage_id: ID!
+}
+
+input UpdateContratInput {
+  numero_contrat: String
+  date_debut: Date
+  date_fin: Date
+  quantite_contractuelle: Float
+  taux_depassement_autorise: Float
+  quantite_realisee: Float
+  prix: Float
+  statut: StatutContrat
+
+  fournisseur_id: ID
+  emballage_id: ID
+}
+
+type Query {
+  contrat(id: ID! @eq): Contrat @find
+  contrats: [Contrat!]! @all
+}
+
+type Mutation {
+  createContrat(input: CreateContratInput! @spread): Contrat @create
+  updateContrat(id: ID!, input: UpdateContratInput! @spread): Contrat @update
+  deleteContrat(id: ID! @whereKey): Contrat @delete
+}

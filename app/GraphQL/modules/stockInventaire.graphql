@@ -1,0 +1,56 @@
+"Création"
+input CreateStockInventaireInput {
+  entrepot_id: ID!
+  emballage_id: ID!
+  stock_physique: Float!
+  user_id: ID
+  date_inventaire: DateTime!
+  periode_debut: DateTime
+  periode_fin: DateTime
+}
+
+"Mise à jour"
+input UpdateStockInventaireInput {
+  stock_physique: Float
+  user_id: ID
+  date_inventaire: DateTime
+  periode_debut: DateTime
+  periode_fin: DateTime
+}
+
+type StockInventaire {
+  id: ID!
+  entrepot_id: ID!
+  emballage_id: ID!
+  stock_physique: Float!
+  stock_theorique: Float!
+  ecart: Float!
+  user_id: ID
+  date_inventaire: DateTime!
+  periode_debut: DateTime
+  periode_fin: DateTime
+  created_at: DateTime
+  updated_at: DateTime
+
+  entrepot: Entrepot @belongsTo
+  emballage: Emballage @belongsTo
+}
+
+extend type Query {
+  stockInventaires: [StockInventaire!]!
+    @all(model: "App\\Models\\StockInventaire")
+
+  stockInventaire(id: ID! @eq): StockInventaire
+    @find(model: "App\\Models\\StockInventaire")
+}
+
+extend type Mutation {
+  createStockInventaire(input: CreateStockInventaireInput!): StockInventaire
+    @field(resolver: "App\\GraphQL\\Mutations\\StockInventaireMutator@create")
+
+  updateStockInventaire(id: ID!, input: UpdateStockInventaireInput!): StockInventaire
+    @field(resolver: "App\\GraphQL\\Mutations\\StockInventaireMutator@update")
+
+  deleteStockInventaire(id: ID!): StockInventaire
+    @field(resolver: "App\\GraphQL\\Mutations\\StockInventaireMutator@delete")
+}

@@ -1,0 +1,87 @@
+enum MouvementType {
+  PRD
+  CDD
+  PTE
+  SPL
+  EMC
+}
+
+enum MouvementStatut {
+  BROUILLON
+  VALIDE
+}
+
+type MouvementStock {
+  id: ID!
+  code_mouvement: String
+  type_mouvement: MouvementType!
+  emballage_id: ID!
+  emballage: Emballage @belongsTo
+  lot_id: ID
+  entrepot_source_id: ID
+  entrepot_destination_id: ID
+  quantite: Float!
+  date_mouvement: DateTime
+  user_id: ID
+  statut: MouvementStatut!
+
+  lot: Lot @belongsTo
+  entrepotSource: Entrepot @belongsTo
+  entrepotDestination: Entrepot @belongsTo
+  user: User @belongsTo
+}
+
+type StockDisponibleParLot {
+  lot_id: ID
+  emballage_id: ID!
+  entrepot_id: ID!
+  stock_disponible: Float!
+  lot: Lot @belongsTo
+  emballage: Emballage @belongsTo
+  entrepot: Entrepot @belongsTo
+}
+
+type LotDisponibleStock {
+  lot_id: ID
+  emballage_id: ID!
+  entrepot_id: ID!
+  stock_disponible: Float!
+  code_lot: String
+}
+
+input CreateMouvementDraftInput {
+  type_mouvement: MouvementType!
+  emballage_id: ID!
+  lot_id: ID
+  entrepot_source_id: ID
+  entrepot_destination_id: ID
+  quantite: Float!
+  date_mouvement: DateTime
+}
+
+input ValidateMouvementInput {
+  id: ID!
+}
+
+extend type Query {
+  mouvementStocks: [MouvementStock!]! @paginate
+  mouvementStock(id: ID! @eq): MouvementStock @find
+
+  lotsDisponiblesParEntrepotEtEmballage(
+    entrepot_id: ID!
+    emballage_id: ID!
+  ): [LotDisponibleStock!]!
+    @field(resolver: "App\\GraphQL\\Queries\\StockQuery@lotsDisponibles")
+}
+
+
+extend type Mutation {
+  createMouvementDraft(input: CreateMouvementDraftInput!): MouvementStock
+    @field(resolver: "App\\GraphQL\\Mutations\\MouvementStockMutator@createDraft")
+
+  validateMouvement(input: ValidateMouvementInput!): MouvementStock
+    @field(resolver: "App\\GraphQL\\Mutations\\MouvementStockMutator@validate")
+
+  deleteMouvementDraft(id: ID!): Boolean
+    @field(resolver: "App\\GraphQL\\Mutations\\MouvementStockMutator@deleteDraft")
+}

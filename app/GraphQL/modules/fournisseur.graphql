@@ -1,0 +1,72 @@
+enum StatutFournisseur {
+  ACTIF
+  INACTIF
+}
+
+type Fournisseur {
+  id: ID!
+  raison_sociale: String!
+  logo: String
+  matricule_fiscale: String!
+  telephone: String
+  adresse: String
+  statut: StatutFournisseur!
+
+  latitude: Float
+  longitude: Float
+  adresse_geocodee: String
+  geocoded_at: DateTime
+
+  created_at: DateTime
+  updated_at: DateTime
+}
+
+input FournisseurCreateInput {
+    logo: String
+  raison_sociale: String!
+  matricule_fiscale: String!
+  telephone: String
+  adresse: String
+  statut: StatutFournisseur = ACTIF
+
+  latitude: Float
+  longitude: Float
+  adresse_geocodee: String
+
+}
+
+input FournisseurUpdateInput {
+    logo: String
+
+  raison_sociale: String
+  matricule_fiscale: String
+  telephone: String
+  adresse: String
+  statut: StatutFournisseur
+
+   latitude: Float
+  longitude: Float
+  adresse_geocodee: String
+}
+
+extend type Query {
+  fournisseurs: [Fournisseur!]!
+    @field(resolver: "App\\GraphQL\\Mutations\\FournisseurMutator@list")
+
+  fournisseur(id: ID!): Fournisseur
+    @field(resolver: "App\\GraphQL\\Mutations\\FournisseurMutator@find")
+
+  fournisseursMap: [Fournisseur!]!
+    @field(resolver: "App\\GraphQL\\Queries\\FournisseurQuery@map")  
+}
+
+extend type Mutation {
+  createFournisseur(input: FournisseurCreateInput!): Fournisseur!
+    @field(resolver: "App\\GraphQL\\Mutations\\FournisseurMutator@create")
+
+  updateFournisseur(id: ID!, input: FournisseurUpdateInput!): Fournisseur!
+    @field(resolver: "App\\GraphQL\\Mutations\\FournisseurMutator@update")
+
+  deleteFournisseur(id: ID!): Boolean!
+    @field(resolver: "App\\GraphQL\\Mutations\\FournisseurMutator@delete")
+}

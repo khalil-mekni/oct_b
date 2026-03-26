@@ -1,0 +1,62 @@
+type Stock {
+  id: ID!
+  entrepot_id: ID!
+  emballage_id: ID!
+  lot_id: ID
+  date_stock: DateTime!
+ #  quantite_init: Float!
+  quantite: Float!
+  sens: StockSens!
+  # quantite_finale: Float!
+  user_id: ID
+
+  entrepot: Entrepot @belongsTo
+  emballage: Emballage @belongsTo
+  lot: Lot @belongsTo
+  user: User @belongsTo
+
+  created_at: DateTime
+  updated_at: DateTime
+}
+
+enum StockSens {
+  entree
+  sortie
+}
+input StockUpdateInput {
+  entrepot_id: ID
+  emballage_id: ID
+  lot_id: ID
+  date_stock: DateTime
+  quantite: Float
+  sens: StockSens
+  user_id: ID
+}
+extend type Query {
+  stocks: [Stock!]!
+    @paginate(builder: "App\\GraphQL\\Queries\\StockQuery@all", defaultCount: 20)
+
+  stockHistory(
+    entrepot_id: ID!
+    emballage_id: ID!
+    from: DateTime!
+    to: DateTime!
+  ): [Stock!]!
+    @field(resolver: "App\\GraphQL\\Queries\\StockQuery@history")
+
+  stockTheoriqueAt(
+    entrepot_id: ID!
+    emballage_id: ID!
+    at: DateTime!
+  ): Float!
+    @field(resolver: "App\\GraphQL\\Queries\\StockQuery@theoriqueAt")
+}
+
+extend type Mutation {
+  updateStock(id: ID!, input: StockUpdateInput!): Stock
+    @field(resolver: "App\\GraphQL\\Mutations\\StockMutator@update")
+
+  deleteStock(id: ID!): Stock
+    @field(resolver: "App\\GraphQL\\Mutations\\StockMutator@delete")
+}
+ 

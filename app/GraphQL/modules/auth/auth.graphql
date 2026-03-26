@@ -1,0 +1,40 @@
+type AuthPayload {
+    token: String!
+    user: User!
+}
+
+extend type Query {
+
+      me: User 
+      @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@me") 
+      @guard
+
+}
+
+extend type Mutation {
+
+    login(
+        email: String!
+        password: String!
+    ): AuthPayload
+        @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@login")
+
+    register(
+        name: String!
+        email: String!
+        password: String!
+        role: String
+    ): AuthPayload
+        @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@register")
+
+    resendVerificationEmail: String
+        @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@resendVerificationEmail")
+        @auth
+
+    verifyEmail(token: String!): String!
+
+
+    logout: Boolean
+        @field(resolver: "App\\GraphQL\\Mutations\\Auth\\AuthMutator@logout")
+        @auth
+}
