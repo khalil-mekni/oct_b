@@ -16,9 +16,16 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
         'role',
+        'phone',
+        'birth_date',
+        'address',
+        'is_active',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -28,6 +35,9 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'birth_date' => 'date',
+        'last_login_at' => 'datetime',
+        'is_active' => 'boolean',
         'password' => 'hashed',
     ];
 
@@ -35,9 +45,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $this->notify(new VerifyEmailGraphQL());
     }
-    
+
     public function sendPasswordResetNotification($token)
-{
-    $this->notify(new ResetPasswordGraphQL($token));
-}
+    {
+        $this->notify(new ResetPasswordGraphQL($token));
+    }
 }

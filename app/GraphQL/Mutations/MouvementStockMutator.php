@@ -7,9 +7,7 @@ use App\Services\MouvementStockService;
 
 class MouvementStockMutator
 {
-    public function __construct(
-        private MouvementStockService $service
-    ) {}
+    public function __construct(private MouvementStockService $service) {}
 
     public function createDraft($_, array $args): MouvementStock
     {
