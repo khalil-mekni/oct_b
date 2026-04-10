@@ -15,7 +15,14 @@ class DatabaseSeeder extends Seeder
     ['email' => 'admin@example.com'],
     [
         'name' => 'Admin User',
-        'password' => Hash::make('password'),
+        'first_name' => 'Admin',
+        'last_name' => 'User',
+        'password' => Hash::make('password123'),
+        'role' => 'ADMIN',
+        'phone' => null,
+        'birth_date' => null,
+        'address' => null,
+        'is_active' => true,
         'email_verified_at' => now(),
     ]
 );
@@ -26,7 +33,8 @@ class DatabaseSeeder extends Seeder
             FournisseurSeeder::class,
             EmballageSeeder::class,
             ContratSeeder::class,
-            StockSeeder::class,            LotSeeder::class,
+            StockSeeder::class,            
+            //LotSeeder::class,
 
             //StockInventaireSeeder::class,
         ]);

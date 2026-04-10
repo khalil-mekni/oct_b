@@ -39,7 +39,19 @@ return new class extends Migration
                   ->constrained('users')
                   ->cascadeOnDelete();
 
-            $table->timestamps();
+
+                  $table->string('document_bl')->nullable();
+
+
+                  $table->timestamp('date_validation')->nullable();
+
+
+                  $table->foreignId('validated_by')
+                     ->nullable()
+                     ->constrained('users')
+                   ->nullOnDelete();
+            
+                   $table->timestamps();
         });
     }
 

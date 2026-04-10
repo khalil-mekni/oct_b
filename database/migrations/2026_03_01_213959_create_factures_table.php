@@ -17,12 +17,21 @@ return new class extends Migration
             $table->string('numero_facture');
             $table->date('date_facture');
 
+            // Montants
             $table->decimal('montant_ht', 15, 2);
+            $table->decimal('montant_penalites', 15, 3)->default(0);
+            $table->integer('jours_retard_total')->default(0);
+            $table->decimal('montant_ht_net', 15, 3)->default(0);
             $table->decimal('montant_ttc', 15, 2);
 
+            // Statut
             $table->enum('statut', ['BROUILLON','VALIDE','PAYE'])
                   ->default('BROUILLON');
 
+            // Détails pénalités
+            $table->text('details_calcul_penalite')->nullable();
+
+            // Relations
             $table->foreignId('emballage_id')
                   ->constrained('emballages')
                   ->cascadeOnDelete();
@@ -43,6 +52,7 @@ return new class extends Migration
                   ->constrained()
                   ->nullOnDelete();
 
+            // ⚠️ tu peux garder ou supprimer ça selon ton besoin
             $table->foreignId('bon_livraison_id')
                   ->nullable()
                   ->constrained()
@@ -55,6 +65,16 @@ return new class extends Migration
 
             $table->timestamps();
         });
+
+        // 🔥 Ajout dans bon_livraisons (relation inverse)
+        Schema::table('bon_livraisons', function (Blueprint $table) {
+            $table->foreignId('facture_id')
+                  ->nullable()
+                  ->constrained('factures')
+                  ->nullOnDelete();
+
+            $table->boolean('is_factured')->default(false);
+        });
     }
 
     /**
@@ -62,6 +82,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('bon_livraisons', function (Blueprint $table) {
+            $table->dropForeign(['facture_id']);
+            $table->dropColumn(['facture_id', 'is_factured']);
+        });
+
         Schema::dropIfExists('factures');
     }
 };

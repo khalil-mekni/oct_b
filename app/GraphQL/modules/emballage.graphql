@@ -1,12 +1,23 @@
+enum StatusEmballage {
+  ACTIVE
+  INACTIVE
+}
+
 type Emballage {
   id: ID!
   code: String!
   name: String!
   type: String!
+  min_stock: Int
+  description: String
   capacity_value: Float
   capacity_unit: String
+  poids: Float
+  epaisseur_pp: Float
+  epaisseur_ppc: Float
+  largeur: Float
   material: String
-  status: String!
+  status: StatusEmballage!
   created_at: DateTime!
   updated_at: DateTime!
 }
@@ -15,19 +26,31 @@ input CreateEmballageInput {
   code: String!
   name: String!
   type: String!
+  min_stock: Int
+  description: String
   capacity_value: Float
   capacity_unit: String
+  poids: Float
+  epaisseur_pp: Float
+  epaisseur_ppc: Float
+  largeur: Float
   material: String
-  status: String = "ACTIVE"
+  status: StatusEmballage = ACTIVE
 }
 
 input UpdateEmballageInput {
   name: String
   type: String
+  min_stock: Int
+  description: String
   capacity_value: Float
   capacity_unit: String
+  poids: Float
+  epaisseur_pp: Float
+  epaisseur_ppc: Float
+  largeur: Float
   material: String
-  status: String
+  status: StatusEmballage
 }
 
 extend type Query {

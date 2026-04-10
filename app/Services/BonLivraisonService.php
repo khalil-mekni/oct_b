@@ -6,20 +6,22 @@ use App\Models\BonLivraison;
 use App\Models\Commande;
 use App\Models\Entrepot;
 use App\Models\Emballage;
+use App\Services\Alerts\AlertScanTriggerService;
+use App\Services\StockService;
+use App\Services\MouvementStockService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Services\StockService;
-use App\Services\MouvementStockService;
 
 class BonLivraisonService
 {
+    
     public function __construct(
         private StockService $stockService,
-        private MouvementStockService $mouvementStockService
-    ) {}
-
-    private const STATUTS = ['EN_ATTENTE', 'VALIDE'];
+        private MouvementStockService $mouvementStockService,
+        //private AlertScanTriggerService $alertScanTrigger
+    ) {
+    }
 
     public function create(array $data, $file)
     {
@@ -27,32 +29,32 @@ class BonLivraisonService
 
         if (!$file instanceof UploadedFile || !$file->isValid()) {
             throw ValidationException::withMessages([
-                'document_bl' => 'Fichier invalide.'
+                'document_bl' => 'Fichier invalide.',
             ]);
         }
 
         $commande = Commande::where('numero_commande', $data['numero_commande'])->first();
         if (!$commande) {
             throw ValidationException::withMessages([
-                'numero_commande' => 'Commande non trouvée.'
+                'numero_commande' => 'Commande non trouvée.',
             ]);
         }
 
         if (!Emballage::find($data['emballage_id'])) {
             throw ValidationException::withMessages([
-                'emballage_id' => 'Emballage introuvable.'
+                'emballage_id' => 'Emballage introuvable.',
             ]);
         }
 
         if (!Entrepot::find($data['entrepot_id'])) {
             throw ValidationException::withMessages([
-                'entrepot_id' => 'Entrepôt introuvable.'
+                'entrepot_id' => 'Entrepôt introuvable.',
             ]);
         }
 
         if ((float) $data['quantite_recue'] <= 0) {
             throw ValidationException::withMessages([
-                'quantite_recue' => 'Quantité reçue doit être positive.'
+                'quantite_recue' => 'Quantité reçue doit être positive.',
             ]);
         }
 
@@ -61,9 +63,10 @@ class BonLivraisonService
 
         if ($totalApres > (float) $commande->quantite) {
             throw ValidationException::withMessages([
-                'quantite_recue' => 'La quantité reçue dépasse la quantité commandée.'
+                'quantite_recue' => 'La quantité reçue dépasse la quantité commandée.',
             ]);
         }
+        
 
         return DB::transaction(function () use ($data, $file, $commande, $userId) {
             $path = $file->store('bon_livraisons', 'public');
@@ -79,7 +82,8 @@ class BonLivraisonService
                 'receptionne_par' => $userId,
             ]);
 
-            $draft = $this->mouvementStockService->createDraft([
+            // Création automatique du mouvement d'entrée EN BROUILLON
+            $this->mouvementStockService->createDraft([
                 'type_mouvement' => 'ENT',
                 'emballage_id' => (int) $bl->emballage_id,
                 'entrepot_destination_id' => (int) $bl->entrepot_id,
@@ -88,8 +92,6 @@ class BonLivraisonService
                 'user_id' => $userId,
             ]);
 
-            $this->mouvementStockService->validateMovement($draft);
-
             $total = BonLivraison::where('commande_id', $commande->id)->sum('quantite_recue');
 
             if ($total < $commande->quantite) {
@@ -97,8 +99,12 @@ class BonLivraisonService
             } else {
                 $commande->statut = 'RECEPTIONNEE';
             }
+            $this->incrementerQuantiteContrat($commande,(float) $data['quantite_recue']);
+
 
             $commande->save();
+
+            //$this->alertScanTrigger->dispatch();
 
             return $bl->refresh();
         });
@@ -106,20 +112,10 @@ class BonLivraisonService
 
     public function update(BonLivraison $bonLivraison, array $data): BonLivraison
     {
-        if ($bonLivraison->statut !== 'EN_ATTENTE') {
-            throw new \InvalidArgumentException("Update allowed only if statut is EN_ATTENTE.");
-        }
-
         $allowed = ['date_reception', 'emballage_id', 'quantite_recue', 'numero_commande', 'entrepot_id', 'statut'];
         $data = array_intersect_key($data, array_flip($allowed));
-
-        if (isset($data['statut'])) {
-            $data['statut'] = strtoupper($data['statut']);
-
-            if (!in_array($data['statut'], self::STATUTS, true)) {
-                throw new \InvalidArgumentException("Invalid statut.");
-            }
-        }
+        $commande = $bonLivraison->commande;
+        
 
         if (isset($data['quantite_recue']) && $data['quantite_recue'] <= 0) {
             throw new \InvalidArgumentException("quantite_recue must be > 0.");
@@ -150,30 +146,66 @@ class BonLivraisonService
                 throw new \InvalidArgumentException("Emballage not found.");
             }
         }
-
+        $ancienneQuantite = (float) $bonLivraison->quantite_recue;
+        $nouvelleQuantite = isset($data['quantite_recue'])
+         ? (float) $data['quantite_recue']
+         : $ancienneQuantite;
+        $diff = $nouvelleQuantite - $ancienneQuantite;
         $bonLivraison->update($data);
-
+        if ($diff != 0) {
+            $this->incrementerQuantiteContrat($commande, $diff);
+        }
+        $total = BonLivraison::where('commande_id', $commande->id)->sum('quantite_recue');
+        if ($total <= 0) {
+            $commande->statut = 'EN_ATTENTE';
+        } 
+        elseif ($total < $commande->quantite) {
+            $commande->statut = 'PARTIELLEMENT_RECEPTIONNEE';
+        }
+        else {
+            $commande->statut = 'RECEPTIONNEE';
+        }
+        $commande->save();
+        
+        //$this->alertScanTrigger->dispatch();
         return $bonLivraison->refresh();
     }
 
     public function delete(BonLivraison $bonLivraison): BonLivraison
     {
-        if ($bonLivraison->statut !== 'EN_ATTENTE') {
-            throw new \InvalidArgumentException("Delete allowed only if statut is EN_ATTENTE.");
+        
+        $commande = $bonLivraison->commande;
+        $quantite = (float) $bonLivraison->quantite_recue;
+        if ($commande) {
+            $this->incrementerQuantiteContrat($commande, -$quantite);
         }
 
-        $bonLivraison->delete();
+       $bonLivraison->delete();
+       if ($commande) {
+        $total = BonLivraison::where('commande_id', $commande->id)->sum('quantite_recue');
+        if ($total <= 0) {
+            $commande->statut = 'En_ATTENTE';
+        } elseif ($total < $commande->quantite) {
+             $commande->statut = 'PARTIELLEMENT_RECEPTIONNEE';
+        } else {
+            $commande->statut = 'RECEPTIONNEE';
+        }
+
+        $commande->save();
+    }
+
+        //$this->alertScanTrigger->dispatch();
 
         return $bonLivraison;
     }
-
-    private function generateLotCode(BonLivraison $bonLivraison): string
+    private function incrementerQuantiteContrat(Commande $commande, float $quantite): void
     {
-        return 'LOT-' . now()->format('YmdHis') . '-' . $bonLivraison->id;
-    }
-
-    private function generateMovementCode(): string
-    {
-        return 'MVT-' . now()->format('YmdHis');
+        $contrat = $commande->contrat;
+        if (!$contrat) {
+            return;
+        }
+        $contrat->quantite_realisee = max(0,(float) ($contrat->quantite_realisee ?? 0) + $quantite);
+        
+        $contrat->save();
     }
 }

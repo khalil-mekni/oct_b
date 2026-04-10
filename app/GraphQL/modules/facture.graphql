@@ -2,18 +2,24 @@ type Facture {
   id: ID!
   numero_facture: String!
   date_facture: Date!
-  montant_ht: Float!
+  
+  # Champs ajoutés pour le module avancé
+  montant_ht: Float!          # Brut
+  montant_penalites: Float    # NOUVEAU
+  montant_ht_net: Float       # NOUVEAU
   montant_ttc: Float!
+  jours_retard_total: Int     # NOUVEAU
+  
   statut: String!
-  emballage_id: ID
-  quantite_facturee: Float
-
-  fournisseur_id: ID!
-  contrat_id: ID
-  commande_id: ID
-  bon_livraison_id: ID
-  valide_par: ID
-
+  emballage: Emballage @belongsTo
+  fournisseur: Fournisseur @belongsTo
+  contrat: Contrat @belongsTo
+  commande: Commande @belongsTo
+  
+  # Pour voir tous les BL liés à cette facture
+  bon_livraisons: [BonLivraison!] @hasMany 
+  
+  valide_par: User @belongsTo
   created_at: DateTime!
   updated_at: DateTime!
 }
@@ -21,17 +27,22 @@ type Facture {
 input CreateFactureInput {
   numero_facture: String!
   date_facture: Date!
-  montant_ht: Float!
-  emballage_id: ID!
-  quantite_facturee: Float!
-  commande_id: ID!
-  statut: String = "BROUILLON"
+  bon_livraison_ids: [ID!]!
+  statut: String
+  montant_ht: Float
+  emballage_id: ID
+  fournisseur_id: ID
+  contrat_id: ID
+  montant_penalites: Float
+  jours_retard_total: Int
 }
 
 input UpdateFactureInput {
   numero_facture: String
   date_facture: Date
   montant_ht: Float
+  montant_penalites: Float
+  jours_retard_total: Int
   emballage_id: ID
   quantite_facturee: Float
   commande_id: ID

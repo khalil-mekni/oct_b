@@ -3,13 +3,18 @@ enum StatutFournisseur {
   INACTIF
 }
 
+
 type Fournisseur {
   id: ID!
   raison_sociale: String!
   logo: String
   matricule_fiscale: String!
+  registre_entreprise: String      
   telephone: String
+  email: String
   adresse: String
+  representant_nom: String
+  representant_role: String
   statut: StatutFournisseur!
 
   latitude: Float
@@ -17,34 +22,40 @@ type Fournisseur {
   adresse_geocodee: String
   geocoded_at: DateTime
 
-  created_at: DateTime
-  updated_at: DateTime
+  created_at: DateTime!
+  updated_at: DateTime!
 }
 
 input FournisseurCreateInput {
-    logo: String
   raison_sociale: String!
+  logo: String
   matricule_fiscale: String!
+  registre_entreprise: String
   telephone: String
+  email: String
   adresse: String
+  representant_nom: String
+  representant_role: String
   statut: StatutFournisseur = ACTIF
 
   latitude: Float
   longitude: Float
   adresse_geocodee: String
-
 }
 
 input FournisseurUpdateInput {
-    logo: String
-
   raison_sociale: String
+  logo: String
   matricule_fiscale: String
+  registre_entreprise: String
   telephone: String
+  email: String
   adresse: String
+  representant_nom: String
+  representant_role: String
   statut: StatutFournisseur
 
-   latitude: Float
+  latitude: Float
   longitude: Float
   adresse_geocodee: String
 }

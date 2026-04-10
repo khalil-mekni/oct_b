@@ -10,14 +10,20 @@ return new class extends Migration {
         Schema::create('emballages', function (Blueprint $table) {
             $table->id();
 
-            $table->string('code', 50)->unique();      // ex: EMB-001
-            $table->string('name', 255);               // ex: Sachet 1kg
-            $table->string('type', 50);                // ex: SACHET, CARTON
+            $table->string('code', 50)->unique();     
+            $table->string('name', 255);               
+            $table->string('type', 50);                
+            $table->text('description')->nullable();  
 
-            $table->decimal('capacity_value', 12, 3)->nullable(); // 1.000
-            $table->string('capacity_unit', 20)->nullable();      // kg, g, L...
+            $table->decimal('capacity_value', 12, 3)->nullable(); 
+            $table->string('capacity_unit', 20)->nullable();     
 
-            $table->string('material', 100)->nullable();          // Plastic, Paper...
+            $table->decimal('poids', 8, 2)->nullable();           
+            $table->decimal('epaisseur_pp', 5, 3)->nullable();    
+            $table->decimal('epaisseur_ppc', 5, 3)->nullable();   
+            $table->decimal('largeur', 6, 2)->nullable();       
+
+            $table->string('material', 100)->nullable();        
             $table->enum('status', ['ACTIVE', 'INACTIVE'])->default('ACTIVE');
 
             $table->timestamps();

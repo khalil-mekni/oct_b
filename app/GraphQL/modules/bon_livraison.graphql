@@ -16,6 +16,9 @@ type BonLivraison {
   document_bl: String
   date_validation: DateTime
   validated_by: ID
+  commande: Commande @belongsTo
+  emballage: Emballage @belongsTo
+  entrepot: Entrepot @belongsTo
 
   created_at: DateTime!
   updated_at: DateTime!

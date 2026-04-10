@@ -17,7 +17,8 @@ class FournisseurSeeder extends Seeder
                 'matricule_fiscale' => "MF000$i",
                 'telephone' => "+2167000000$i",
                 'adresse' => "Zone Industrielle $i",
-                'statut' => $i % 3 == 0 ? 'INACTIF' : 'ACTIF',
+                'statut' => $i % 3 == 0 ? 'INACTIF' : 'ACTIF',   'latitude' => 36.80 + ($i * 0.01),
+    'longitude' => 10.18 + ($i * 0.01),
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

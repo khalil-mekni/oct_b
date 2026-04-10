@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('contrats', function (Blueprint $table) {
+    /*    Schema::table('contrats', function (Blueprint $table) {
             // si colonne déjà existante, ne pas la recréer
             if (!Schema::hasColumn('contrats', 'emballage_id')) {
                 $table->unsignedBigInteger('emballage_id')->after('fournisseur_id');
@@ -20,12 +20,12 @@ return new class extends Migration {
             $table->foreign('emballage_id', 'contrats_emballage_id_foreign')
                 ->references('id')->on('emballages')
                 ->onDelete('restrict'); // ou cascade selon ton besoin
-        });
+        });*/
     }
 
     public function down(): void
     {
-        Schema::table('contrats', function (Blueprint $table) {
+       /* Schema::table('contrats', function (Blueprint $table) {
             // drop FK / index si existent
             try { $table->dropForeign('contrats_emballage_id_foreign'); } catch (\Throwable $e) {}
             try { $table->dropIndex('contrats_emballage_id_index'); } catch (\Throwable $e) {}
@@ -33,6 +33,6 @@ return new class extends Migration {
             if (Schema::hasColumn('contrats', 'emballage_id')) {
                 $table->dropColumn('emballage_id');
             }
-        });
+        });*/
     }
 };

@@ -15,6 +15,7 @@ class LotSeeder extends Seeder
             [
                 'code_lot' => 'LOT-001',
                 'emballage_id' => 1,
+                'entrepot_id' => 1,
                 'quantite' => 1000,
                 'user_id' => 1,
                 'date_mvt' => $now,
@@ -25,6 +26,7 @@ class LotSeeder extends Seeder
             [
                 'code_lot' => 'LOT-002',
                 'emballage_id' => 2,
+                'entrepot_id' => 1,
                 'quantite' => 500,
                 'user_id' => 1,
                 'date_mvt' => $now,
@@ -35,6 +37,7 @@ class LotSeeder extends Seeder
             [
                 'code_lot' => 'LOT-003',
                 'emballage_id' => 3,
+                'entrepot_id' => 2,
                 'quantite' => 200,
                 'user_id' => 1,
                 'date_mvt' => $now,
@@ -45,6 +48,7 @@ class LotSeeder extends Seeder
             [
                 'code_lot' => 'LOT-004',
                 'emballage_id' => 4,
+                'entrepot_id' => 2,
                 'quantite' => 300,
                 'user_id' => 1,
                 'date_mvt' => $now,
@@ -55,6 +59,7 @@ class LotSeeder extends Seeder
             [
                 'code_lot' => 'LOT-005',
                 'emballage_id' => 5,
+                'entrepot_id' => 1,
                 'quantite' => 50,
                 'user_id' => 1,
                 'date_mvt' => $now,
@@ -68,6 +73,7 @@ class LotSeeder extends Seeder
             DB::table('lots')->insert([
                 'code_lot' => 'LOT-' . str_pad($i, 3, '0', STR_PAD_LEFT),
                 'emballage_id' => $i,
+                'entrepot_id' => ($i % 2 === 0) ? 1 : 2, // alternance entre entrepôts
                 'quantite' => rand(100, 800),
                 'user_id' => 1,
                 'date_mvt' => $now,
