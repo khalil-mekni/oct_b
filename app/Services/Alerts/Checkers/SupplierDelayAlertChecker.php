@@ -18,14 +18,15 @@ class SupplierDelayAlertChecker
     {
         $orders = Commande::query()
             ->whereNotNull('date_livraison_prevue')
-            ->whereNotIn('statut', ['livree', 'terminee', 'annulee'])
+            ->whereNotIn('statut', ['RECEPTIONNEE', 'ANNULEE'])
             ->get();
 
         foreach ($orders as $order) {
             $expectedDate = Carbon::parse($order->date_livraison_prevue)->startOfDay();
             $today = now()->startOfDay();
+            $remaining = max(0, (float) $order->reste);
 
-            if ($today->lte($expectedDate)) {
+            if ($today->lte($expectedDate) || $remaining <= 0) {
                 $this->alertService->resolve(
                     AlertType::SUPPLIER_DELAY,
                     'commande',
@@ -49,11 +50,14 @@ class SupplierDelayAlertChecker
                 'severity' => $severity,
                 'entity_type' => 'commande',
                 'entity_id' => $order->id,
-                'action_url' => "/commandes/{$order->id}",
+                'action_url' => "/commandes?highlight={$order->id}",
                 'metadata' => [
                     'numero_commande' => $reference,
                     'date_livraison_prevue' => $expectedDate->toDateString(),
                     'delay_days' => $delayDays,
+                    'quantite_commandee' => (float) $order->quantite,
+                    'quantite_recue_total' => (float) $order->quantite_recue_total,
+                    'reste' => $remaining,
                     'fournisseur_id' => $order->fournisseur_id ?? null,
                 ],
             ]);

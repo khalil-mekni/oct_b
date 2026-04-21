@@ -32,4 +32,8 @@ class ContratMutator
     {
         return $this->service->delete((int) $args['id']);
     }
+    public function refreshStatuts($_, array $args)
+    {
+        return $this->service->refreshStatuts();
+    }
 }

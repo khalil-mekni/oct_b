@@ -13,13 +13,17 @@ class Fournisseur extends Model
     protected $table = 'fournisseurs';
 
     protected $fillable = [
-        'raison_sociale',
+       'raison_sociale',
         'matricule_fiscale',
-            'logo',
+        'registre_entreprise',
+        'logo',
         'telephone',
+        'email',
         'adresse',
+        'representant_nom',
+        'representant_role',
         'statut',
-         'latitude',
+        'latitude',
         'longitude',
         'adresse_geocodee',
         'geocoded_at',

@@ -19,4 +19,5 @@ type Mutation
 #import modules/bon_livraison.graphql
 #import modules/facture.graphql
 #import modules/Alert.graphql
+#import modules/dashboard.graphql
 

@@ -17,6 +17,10 @@ type Commande {
   quantite_recue_total: Float!
   reste: Float!
   bon_livraisons: [BonLivraison!]! @hasMany
+  contrat: Contrat @belongsTo
+  fournisseur: Fournisseur @belongsTo
+  emballage: Emballage @belongsTo
+  entrepot: Entrepot @belongsTo
 
   created_at: DateTime!
   updated_at: DateTime!

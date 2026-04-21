@@ -1,23 +1,25 @@
-"""
-Enums
-"""
 enum StatutContrat {
   ACTIF
   EXPIRE
   SUSPENDU
 }
 
-"""
-Types
-"""
 type Contrat {
   id: ID!
   numero_contrat: String!
+  objet: String
+  date_signature: Date
   date_debut: Date!
   date_fin: Date!
   quantite_contractuelle: Float!
   taux_depassement_autorise: Float!
-  quantite_realisee: Float!
+  quantite_realisee: Float
+  montant_ht: Float
+  montant_tva: Float
+  taux_cautionnement: Float
+  taux_penalite_retard: Float
+  plafond_penalite: Float
+  prix_unitaire: Float
   statut: StatutContrat!
 
   fournisseur_id: ID!
@@ -30,16 +32,21 @@ type Contrat {
   updated_at: DateTime
 }
 
-"""
-Inputs
-"""
 input CreateContratInput {
   numero_contrat: String!
+  objet: String
+  date_signature: Date
   date_debut: Date!
   date_fin: Date!
   quantite_contractuelle: Float!
   taux_depassement_autorise: Float = 0.20
-  quantite_realisee: Float = 0.00
+  quantite_realisee: Float = 0.0
+  montant_ht: Float
+  montant_tva: Float
+  taux_cautionnement: Float
+  taux_penalite_retard: Float
+  plafond_penalite: Float
+  prix_unitaire: Float
   statut: StatutContrat = ACTIF
 
   fournisseur_id: ID!
@@ -48,11 +55,19 @@ input CreateContratInput {
 
 input UpdateContratInput {
   numero_contrat: String
+  objet: String
+  date_signature: Date
   date_debut: Date
   date_fin: Date
   quantite_contractuelle: Float
   taux_depassement_autorise: Float
   quantite_realisee: Float
+  montant_ht: Float
+  montant_tva: Float
+  taux_cautionnement: Float
+  taux_penalite_retard: Float
+  plafond_penalite: Float
+  prix_unitaire: Float
   statut: StatutContrat
 
   fournisseur_id: ID
@@ -62,6 +77,8 @@ input UpdateContratInput {
 type Query {
   contrat(id: ID! @eq): Contrat @find
   contrats: [Contrat!]! @all
+  refreshContratStatuts: [Contrat!]!
+    @field(resolver: "App\\GraphQL\\Mutations\\ContratMutator@refreshStatuts")
 }
 
 type Mutation {

@@ -26,7 +26,11 @@ class LotExpiringAlertChecker
             $daysRemaining = $today->diffInDays($expirationDate, false);
 
             if ($daysRemaining < 0) {
-                $this->alertService->resolve(AlertType::LOT_EXPIRING, 'lot', $lot->id);
+                $this->alertService->resolve(
+                    AlertType::LOT_EXPIRING,
+                    'lot',
+                    $lot->id
+                );
                 continue;
             }
 
@@ -50,7 +54,7 @@ class LotExpiringAlertChecker
                     'severity' => $severity,
                     'entity_type' => 'lot',
                     'entity_id' => $lot->id,
-                    'action_url' => "/lots/{$lot->id}",
+                    'action_url' => "/lots?highlight={$lot->id}",
                     'metadata' => [
                         'lot_code' => $lotCode,
                         'expiration_date' => $expirationDate->toDateString(),
@@ -58,7 +62,11 @@ class LotExpiringAlertChecker
                     ],
                 ]);
             } else {
-                $this->alertService->resolve(AlertType::LOT_EXPIRING, 'lot', $lot->id);
+                $this->alertService->resolve(
+                    AlertType::LOT_EXPIRING,
+                    'lot',
+                    $lot->id
+                );
             }
         }
     }

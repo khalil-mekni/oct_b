@@ -8,10 +8,8 @@ class EmballageService
 {
     public function create(array $data): Emballage
     {
-        // Normalisation métier
         $data['type'] = strtoupper($data['type']);
 
-        // Règle cohérence capacité
         if (!empty($data['capacity_value']) && empty($data['capacity_unit'])) {
             throw new \InvalidArgumentException("capacity_unit is required when capacity_value is provided.");
         }

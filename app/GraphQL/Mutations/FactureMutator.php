@@ -4,25 +4,37 @@ namespace App\GraphQL\Mutations;
 
 use App\Models\Facture;
 use App\Services\FactureService;
+use Nuwave\Lighthouse\Execution\ResolveInfo;
+use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 
 class FactureMutator
 {
-    public function __construct(private FactureService $service) {}
+    protected $factureService;
 
-    public function create($_, array $args): Facture
+    public function __construct(FactureService $factureService)
     {
-        return $this->service->create($args['input']);
+        $this->factureService = $factureService;
     }
 
-    public function update($_, array $args): Facture
+    public function create($root, array $args) {
+    return $this->factureService->create($args); 
+}
+
+    /**
+     * Met à jour une facture
+     */
+    public function update($root, array $args, GraphQLContext $context, ResolveInfo $resolveInfo): Facture
     {
         $facture = Facture::findOrFail($args['id']);
-        return $this->service->update($facture, $args['input']);
+        return $this->factureService->update($facture, $args['input']);
     }
 
-    public function delete($_, array $args): bool
+    /**
+     * Supprime une facture
+     */
+    public function delete($root, array $args, GraphQLContext $context, ResolveInfo $resolveInfo): bool
     {
         $facture = Facture::findOrFail($args['id']);
-        return $this->service->delete($facture);
+        return $this->factureService->delete($facture);
     }
 }

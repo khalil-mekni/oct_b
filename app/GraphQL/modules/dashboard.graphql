@@ -1,0 +1,149 @@
+type DashboardOverview {
+  totalWarehouses: Int!
+  totalStock: Float!
+  totalCapacity: Float!
+  totalAvailableCapacity: Float!
+  capacityUsageRate: Float!
+  activeAlertsCount: Int!
+  criticalAlertsCount: Int!
+  unreadAlertsCount: Int!
+  warningAlertsCount: Int!
+}
+
+type WarehouseCapacityItem {
+  id: ID!
+  nom: String!
+  adresse: String
+  capacite_totale: Float!
+  stock_existant: Float!
+  capacite_disponible: Float!
+  statut: String
+  fillRate: Float!
+  level: String!
+}
+
+type AlertsSummary {
+  total: Int!
+  unread: Int!
+  read: Int!
+  archived: Int!
+  info: Int!
+  warning: Int!
+  critical: Int!
+}
+
+type RecentMovementItem {
+  id: ID!
+  code_mouvement: String
+  type: String!
+  type_mouvement: String!
+  quantite: Float!
+  statut: String
+  date_mouvement: DateTime
+  created_at: DateTime
+  sourceWarehouseName: String
+  destinationWarehouseName: String
+  lot_code: String
+  emballage_code: String
+  emballage_name: String
+  user_name: String
+}
+
+type StockMovementStatItem {
+  label: String!
+  in_count: Int!
+  out_count: Int!
+  transfer_count: Int!
+  loss_count: Int!
+}
+
+extend type Query {
+  dashboardOverview: DashboardOverview!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\DashboardOverview")
+
+  warehouseCapacityStats: [WarehouseCapacityItem!]!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\WarehouseCapacityStats")
+
+  recentAlerts(limit: Int = 5): [Alert!]!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\RecentAlerts")
+
+  alertsSummary: AlertsSummary!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\AlertsSummary")
+
+  recentMovements(limit: Int = 10): [RecentMovementItem!]!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\RecentMovements")
+
+  stockMovementsStats(period: String = "7d"): [StockMovementStatItem!]!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\StockMovementsStats")
+}
+
+type ContractWidgetItem {
+  id: ID!
+  reference: String!
+  title: String
+  partnerName: String
+  endDate: Date
+  status: String!
+}
+
+type ContractsWidgetData {
+  totalContracts: Int!
+  activeContracts: Int!
+  expiringSoon: Int!
+  contractAlerts: Int!
+  recentContracts: [ContractWidgetItem!]!
+}
+
+type DeliveryNoteWidgetItem {
+  id: ID!
+  numero_bl: String!
+  commandeReference: String
+  entrepotName: String
+  date_reception: DateTime
+  statut: String!
+}
+
+type DeliveryNotesWidgetData {
+  total: Int!
+  validated: Int!
+  pending: Int!
+  warehousesInvolved: Int!
+  recentDeliveryNotes: [DeliveryNoteWidgetItem!]!
+}
+
+type OrderWidgetItem {
+  id: ID!
+  reference: String!
+  supplierName: String
+  date: DateTime
+  status: String!
+  totalLabel: String
+}
+
+type OrdersWidgetData {
+  total: Int!
+  pending: Int!
+  partiallyReceived: Int!
+  late: Int!
+  recentOrders: [OrderWidgetItem!]!
+}
+
+extend type Query {
+  contractsWidget: ContractsWidgetData!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\ContractsWidget")
+
+  deliveryNotesWidget: DeliveryNotesWidgetData!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\DeliveryNotesWidget")
+
+  ordersWidget: OrdersWidgetData!
+    @guard(with: ["api"])
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\OrdersWidget")
+}

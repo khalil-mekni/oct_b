@@ -1,11 +1,18 @@
 <?php
+
 namespace App\Services\Alerts;
 
 use App\Enums\AlertStatus;
 use App\Models\Alert;
+use App\Services\Mercure\MercurePublisherService;
 
 class AlertService
 {
+    public function __construct(
+        protected MercurePublisherService $mercurePublisherService
+    ) {
+    }
+
     public function createOrUpdate(array $data): Alert
     {
         $alert = Alert::where('type', $data['type'])
@@ -21,13 +28,19 @@ class AlertService
                 'severity' => $data['severity'],
                 'action_url' => $data['action_url'] ?? null,
                 'metadata' => $data['metadata'] ?? null,
-                'status' => $alert->status === AlertStatus::ARCHIVED ? AlertStatus::UNREAD : $alert->status,
+                'status' => $alert->status === AlertStatus::ARCHIVED
+                    ? AlertStatus::UNREAD
+                    : $alert->status,
             ]);
 
-            return $alert->fresh();
+            $freshAlert = $alert->fresh();
+
+            $this->mercurePublisherService->publish('alert.updated', $freshAlert);
+
+            return $freshAlert;
         }
 
-        return Alert::create([
+        $newAlert = Alert::create([
             'type' => $data['type'],
             'title' => $data['title'],
             'message' => $data['message'],
@@ -39,6 +52,12 @@ class AlertService
             'metadata' => $data['metadata'] ?? null,
             'is_active' => true,
         ]);
+
+        $freshAlert = $newAlert->fresh();
+
+        $this->mercurePublisherService->publish('alert.created', $freshAlert);
+
+        return $freshAlert;
     }
 
     public function resolve(string $type, ?string $entityType, $entityId): void

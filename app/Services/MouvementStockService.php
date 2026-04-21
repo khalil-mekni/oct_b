@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Lot;
 use App\Models\MouvementStock;
+use App\Services\Alerts\AlertScanTriggerService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -14,8 +16,10 @@ class MouvementStockService
     public function __construct(
         private StockService $stockService,
         private EntrepotService $entrepotService,
-        private EntrepotLotService $entrepotLotService
-    ) {}
+        private EntrepotLotService $entrepotLotService,
+        private AlertScanTriggerService $alertScanTrigger
+    ) {
+    }
 
     public function createDraft(array $data): MouvementStock
     {
@@ -41,7 +45,9 @@ class MouvementStockService
             return $m->refresh();
         }
 
-        return DB::transaction(function () use ($m) {
+        $impactedEntrepotIds = [];
+
+        $result = DB::transaction(function () use ($m, &$impactedEntrepotIds) {
             $m = MouvementStock::query()
                 ->lockForUpdate()
                 ->findOrFail($m->id);
@@ -55,8 +61,25 @@ class MouvementStockService
                 'user_id' => $m->user_id ?? Auth::id(),
             ]);
 
+            $impactedEntrepotIds = $this->extractImpactedEntrepotIds($m);
+
+            foreach ($impactedEntrepotIds as $entrepotId) {
+                $this->entrepotService->syncStockFromLots($entrepotId, false);
+            }
+
             return $m->refresh();
         });
+
+        foreach ($impactedEntrepotIds as $entrepotId) {
+            Log::info('MouvementStockService::dispatchWarehouseCapacityCheck', [
+                'mouvement_id' => $result->id,
+                'entrepot_id' => $entrepotId,
+            ]);
+
+            $this->alertScanTrigger->dispatchWarehouseCapacityCheck($entrepotId);
+        }
+
+        return $result;
     }
 
     public function deleteDraft(MouvementStock $m): bool
@@ -288,6 +311,21 @@ class MouvementStockService
             sens: 'E',
             userId: $m->user_id
         );
+    }
+
+    private function extractImpactedEntrepotIds(MouvementStock $m): array
+    {
+        $ids = [];
+
+        if ($m->entrepot_source_id) {
+            $ids[] = (int) $m->entrepot_source_id;
+        }
+
+        if ($m->entrepot_destination_id) {
+            $ids[] = (int) $m->entrepot_destination_id;
+        }
+
+        return array_values(array_unique($ids));
     }
 
     private function validateDraft(array $data): void

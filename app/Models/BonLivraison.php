@@ -40,4 +40,8 @@ class BonLivraison extends Model
     {
         return $this->belongsTo(Entrepot::class);
     }
+    public function contrat()
+    {
+        return $this->belongsTo(Contrat::class);
+    }
 }

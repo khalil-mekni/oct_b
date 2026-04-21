@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Lot;
+use App\Services\Alerts\AlertScanTriggerService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -10,8 +11,10 @@ class LotService
 {
     public function __construct(
         private StockService $stockService,
-        private EntrepotService $entrepotService
-    ) {}
+        private EntrepotService $entrepotService,
+        private AlertScanTriggerService $alertScanTrigger
+    ) {
+    }
 
     public function createLotAndApply(array $payload): Lot
     {
@@ -21,12 +24,12 @@ class LotService
             $sens = $payload['sens'] ?? 'E';
 
             $lot = Lot::create([
-                'code_lot'     => $payload['code_lot'] ?? $this->generateCodeLot(),
+                'code_lot' => $payload['code_lot'] ?? $this->generateCodeLot(),
                 'emballage_id' => (int) $payload['emballage_id'],
-                'quantite'     => (float) $payload['quantite'],
-                'user_id'      => $payload['user_id'] ?? null,
-                'date_mvt'     => $payload['date_mvt'],
-                'commentaire'  => $payload['commentaire'] ?? null,
+                'quantite' => (float) $payload['quantite'],
+                'user_id' => $payload['user_id'] ?? null,
+                'date_mvt' => $payload['date_mvt'],
+                'commentaire' => $payload['commentaire'] ?? null,
             ]);
 
             $this->stockService->createHistoryLine(
@@ -44,6 +47,8 @@ class LotService
             } else {
                 $this->entrepotService->removeStock((int) $payload['entrepot_id'], (float) $lot->quantite);
             }
+
+            $this->alertScanTrigger->dispatch();
 
             return $lot->refresh();
         });
@@ -75,13 +80,15 @@ class LotService
             $lot = $this->findLot($id);
 
             $lot->update([
-                'code_lot'     => $input['code_lot'] ?? $lot->code_lot,
+                'code_lot' => $input['code_lot'] ?? $lot->code_lot,
                 'emballage_id' => $input['emballage_id'] ?? $lot->emballage_id,
-                'quantite'     => $input['quantite'] ?? $lot->quantite,
-                'user_id'      => $input['user_id'] ?? $lot->user_id,
-                'date_mvt'     => $input['date_mvt'] ?? $lot->date_mvt,
-                'commentaire'  => $input['commentaire'] ?? $lot->commentaire,
+                'quantite' => $input['quantite'] ?? $lot->quantite,
+                'user_id' => $input['user_id'] ?? $lot->user_id,
+                'date_mvt' => $input['date_mvt'] ?? $lot->date_mvt,
+                'commentaire' => $input['commentaire'] ?? $lot->commentaire,
             ]);
+
+            $this->alertScanTrigger->dispatch();
 
             return $lot->refresh();
         });
@@ -94,6 +101,8 @@ class LotService
 
             $this->stockService->deleteStocksByLot($lot->id);
             $lot->delete();
+
+            $this->alertScanTrigger->dispatch();
 
             return $lot;
         });

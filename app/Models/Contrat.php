@@ -6,31 +6,44 @@ use Illuminate\Database\Eloquent\Model;
 
 class Contrat extends Model
 {
-   protected $table = 'contrats';
+    protected $table = 'contrats';
 
     protected $fillable = [
         'numero_contrat',
+        'objet',
+        'date_signature',
         'date_debut',
         'date_fin',
         'quantite_contractuelle',
-        'taux_depassement_autorise',
         'quantite_realisee',
+        'taux_depassement_autorise',
+        'montant_ht',
+        'montant_tva',
+        'taux_cautionnement',
+        'taux_penalite_retard',
+        'plafond_penalite',
+        'prix_unitaire',
         'statut',
         'fournisseur_id',
-                'emballage_id',
-
+        'emballage_id',
     ];
 
-    /*public function fournisseur()
-    {
-        return $this->belongsTo(Fournisseur::class, 'fournisseur_id');
-    }
-     public function emballage()
-    {
-        return $this->belongsTo(Emballage::class, 'emballage_id');
-    }*/
+    protected $casts = [
+        'date_signature' => 'datetime',
+        'date_debut' => 'datetime',
+        'date_fin' => 'datetime',
+        'quantite_contractuelle' => 'float',
+        'quantite_realisee' => 'float',
+        'taux_depassement_autorise' => 'float',
+        'montant_ht' => 'float',
+        'montant_tva' => 'float',
+        'taux_cautionnement' => 'float',
+        'taux_penalite_retard' => 'float',
+        'plafond_penalite' => 'float',
+        'prix_unitaire' => 'float',
+    ];
 
-        public function fournisseur()
+    public function fournisseur()
     {
         return $this->belongsTo(Fournisseur::class);
     }

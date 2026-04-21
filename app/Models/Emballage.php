@@ -7,11 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class Emballage extends Model
 {
     protected $fillable = [
-        'code',
+    'code',
         'name',
         'type',
+        'description',
+        'min_stock',
         'capacity_value',
         'capacity_unit',
+        'poids',
+        'epaisseur_pp',
+        'epaisseur_ppc',
+        'largeur',
         'material',
         'status',
     ];

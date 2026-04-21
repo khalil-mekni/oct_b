@@ -34,5 +34,18 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    
+    'mercure' => [
+    'hub_url' => env('MERCURE_HUB_URL'),
+    'jwt_secret' => env('MERCURE_JWT_SECRET'),
+    'topic' => env('MERCURE_TOPIC', 'alerts/general'),
+],
+
+
+'ocr_space' => [
+    'key' => env('OCR_SPACE_API_KEY'),
+    'url' => env('OCR_SPACE_URL', 'https://api.ocr.space/parse/image'),
+    'language' => env('OCR_SPACE_LANGUAGE', 'fre'),
+],
 
 ];
