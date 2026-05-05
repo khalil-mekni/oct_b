@@ -170,13 +170,9 @@ class EntrepotLotService
                 ->sum('quantite');
 
             $capaciteTotale = (float) $entrepot->capacite_totale;
-            $capaciteDisponible = $capaciteTotale - $stockExistant;
+            
 
-            if ($capaciteDisponible < 0) {
-                throw new RuntimeException(
-                    "L'entrepôt dépasse sa capacité totale. Capacité totale: {$capaciteTotale}, stock existant: {$stockExistant}."
-                );
-            }
+            $capaciteDisponible = max($capaciteTotale - $stockExistant, 0);
 
             $entrepot->update([
                 'stock_existant' => $stockExistant,

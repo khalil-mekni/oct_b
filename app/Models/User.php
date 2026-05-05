@@ -50,4 +50,8 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $this->notify(new ResetPasswordGraphQL($token));
     }
+    public function alertStatuses()
+    {
+        return $this->hasMany(AlertUserStatus::class);
+    }
 }

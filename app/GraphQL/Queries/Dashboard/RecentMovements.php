@@ -18,6 +18,7 @@ final class RecentMovements
                 'emballage:id,code,name',
                 'user:id,name',
             ])
+            ->latest('date_mouvement')
             ->latest('created_at')
             ->limit($limit)
             ->get();
@@ -46,9 +47,9 @@ final class RecentMovements
     {
         return match ($type) {
             'ENT' => 'IN',
-            'PTE' => 'OUT',
+            'PRD' => 'OUT',
+            'PTE' => 'LOSS',
             'CDD' => 'TRANSFER',
-            'PRD' => 'LOSS',
             'SPL' => 'SPLIT',
             default => (string) $type,
         };

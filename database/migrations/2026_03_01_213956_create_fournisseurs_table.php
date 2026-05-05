@@ -11,15 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-    Schema::create('fournisseurs', function (Blueprint $table) {
-    $table->id();
-    $table->string('raison_sociale');
-    $table->string('matricule_fiscale')->unique();
-    $table->string('telephone')->nullable();
-    $table->string('adresse')->nullable();
-    $table->enum('statut', ['ACTIF', 'INACTIF'])->default('ACTIF');
-    $table->timestamps();
-});
+        Schema::create('fournisseurs', function (Blueprint $table) {
+            $table->id();
+            $table->string('raison_sociale'); 
+            $table->string('matricule_fiscale')->unique(); 
+            $table->string('registre_entreprise')->nullable(); 
+            $table->string('adresse')->nullable();
+            $table->string('telephone')->nullable();
+            $table->string('email')->nullable();
+            $table->string('representant_nom')->nullable();
+            $table->string('representant_role')->nullable();
+            $table->enum('statut', ['ACTIF', 'INACTIF'])->default('ACTIF');
+            $table->timestamps();
+        });
     }
 
     /**

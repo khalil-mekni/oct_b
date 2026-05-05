@@ -65,3 +65,25 @@ extend type Query {
   ): Float!
     @field(resolver: "App\\GraphQL\\Queries\\StockQuery@lotDisponibleDansEntrepot")
 }
+
+
+type StockArchiveDay {
+  date: String!
+  in: Float!
+  out: Float!
+  balance: Float!
+}
+
+type StockArchiveSummary {
+  total_in: Float!
+  total_out: Float!
+  today_in: Float!
+  today_out: Float!
+  balance: Float!
+  days: [StockArchiveDay!]!
+}
+
+extend type Query {
+  stockArchiveSummary: StockArchiveSummary!
+    @field(resolver: "App\\GraphQL\\Queries\\Dashboard\\StockArchiveSummary")
+}

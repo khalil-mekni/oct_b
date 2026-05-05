@@ -4,6 +4,7 @@ type User {
     first_name: String
     last_name: String
     email: String!
+    email_verified_at: DateTime
     role: String!
     phone: String
     birth_date: Date
@@ -14,10 +15,20 @@ type User {
 
 extend type Query {
     users: [User!]!
-        @all
+        @field(resolver: "App\\GraphQL\\Queries\\UserAdminQuery@users")
         @guard(with: ["api"])
 
     user(id: ID!): User
         @find
+        @guard(with: ["api"])
+}
+
+extend type Mutation {
+    updateUserRole(id: ID!, role: String!): User!
+        @field(resolver: "App\\GraphQL\\Mutations\\Admin\\UserAdminMutator@updateUserRole")
+        @guard(with: ["api"])
+
+    updateUserStatus(id: ID!, is_active: Boolean!): User!
+        @field(resolver: "App\\GraphQL\\Mutations\\Admin\\UserAdminMutator@updateUserStatus")
         @guard(with: ["api"])
 }

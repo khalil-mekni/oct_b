@@ -22,65 +22,74 @@ class MouvementStockService
     }
 
     public function createDraft(array $data): MouvementStock
-    {
-        $this->validateDraft($data);
+{
+    $this->validateDraft($data);
 
-        return MouvementStock::create([
-            'code_mouvement' => $data['code_mouvement'] ?? $this->generateCodeMouvement(),
-            'type_mouvement' => $data['type_mouvement'],
-            'emballage_id' => (int) $data['emballage_id'],
-            'lot_id' => $data['lot_id'] ?? null,
-            'entrepot_source_id' => $data['entrepot_source_id'] ?? null,
-            'entrepot_destination_id' => $data['entrepot_destination_id'] ?? null,
-            'quantite' => (float) $data['quantite'],
-            'date_mouvement' => $data['date_mouvement'] ?? now(),
-            'user_id' => Auth::id() ?? ($data['user_id'] ?? null),
-            'statut' => 'BROUILLON',
-        ])->refresh();
-    }
+    // ✅ AJOUT DU CONTROLE CAPACITE
+    $this->validateWarehouseCapacity($data);
+
+    return MouvementStock::create([
+        'code_mouvement' => $data['code_mouvement'] ?? $this->generateCodeMouvement(),
+        'type_mouvement' => $data['type_mouvement'],
+        'emballage_id' => (int) $data['emballage_id'],
+        'lot_id' => $data['lot_id'] ?? null,
+        'entrepot_source_id' => $data['entrepot_source_id'] ?? null,
+        'entrepot_destination_id' => $data['entrepot_destination_id'] ?? null,
+        'quantite' => (float) $data['quantite'],
+        'date_mouvement' => $data['date_mouvement'] ?? now(),
+        'user_id' => Auth::id() ?? ($data['user_id'] ?? null),
+        'statut' => 'BROUILLON',
+    ])->refresh();
+}
 
     public function validateMovement(MouvementStock $m): MouvementStock
-    {
-        if ($m->statut === 'VALIDE') {
-            return $m->refresh();
-        }
+{
+    if ($m->statut === 'VALIDE') {
+        return $m->refresh();
+    }
 
-        $impactedEntrepotIds = [];
+    $impactedEntrepotIds = [];
 
-        $result = DB::transaction(function () use ($m, &$impactedEntrepotIds) {
-            $m = MouvementStock::query()
-                ->lockForUpdate()
-                ->findOrFail($m->id);
+    $result = DB::transaction(function () use ($m, &$impactedEntrepotIds) {
+        $m = MouvementStock::query()
+            ->lockForUpdate()
+            ->findOrFail($m->id);
 
-            $this->validateBeforeApply($m);
-            $this->applyToStocks($m);
+        $this->validateBeforeApply($m);
 
-            $m->update([
-                'statut' => 'VALIDE',
-                'date_mouvement' => $m->date_mouvement ?? now(),
-                'user_id' => $m->user_id ?? Auth::id(),
-            ]);
+        // ✅ 1. Vérifier AVANT modification du stock
+        $this->validateWarehouseCapacity([
+            'type_mouvement' => $m->type_mouvement,
+            'quantite' => $m->quantite,
+            'entrepot_destination_id' => $m->entrepot_destination_id,
+            'entrepot_source_id' => $m->entrepot_source_id,
+        ]);
 
-            $impactedEntrepotIds = $this->extractImpactedEntrepotIds($m);
+        // ✅ 2. Appliquer le mouvement
+        $this->applyToStocks($m);
 
-            foreach ($impactedEntrepotIds as $entrepotId) {
-                $this->entrepotService->syncStockFromLots($entrepotId, false);
-            }
+        // ✅ 3. Marquer comme validé
+        $m->update([
+            'statut' => 'VALIDE',
+            'date_mouvement' => $m->date_mouvement ?? now(),
+            'user_id' => $m->user_id ?? Auth::id(),
+        ]);
 
-            return $m->refresh();
-        });
+        $impactedEntrepotIds = $this->extractImpactedEntrepotIds($m);
 
         foreach ($impactedEntrepotIds as $entrepotId) {
-            Log::info('MouvementStockService::dispatchWarehouseCapacityCheck', [
-                'mouvement_id' => $result->id,
-                'entrepot_id' => $entrepotId,
-            ]);
-
-            $this->alertScanTrigger->dispatchWarehouseCapacityCheck($entrepotId);
+            $this->entrepotService->syncStockFromLots($entrepotId, false);
         }
 
-        return $result;
+        return $m->refresh();
+    });
+
+    foreach ($impactedEntrepotIds as $entrepotId) {
+        $this->alertScanTrigger->dispatchWarehouseCapacityCheck($entrepotId);
     }
+
+    return $result;
+}
 
     public function deleteDraft(MouvementStock $m): bool
     {
@@ -122,6 +131,51 @@ class MouvementStockService
                 throw new InvalidArgumentException("type_mouvement invalide.");
         }
     }
+
+
+
+    private function validateWarehouseCapacity(array $data): void
+{
+    $type = $data['type_mouvement'];
+    $quantite = (float) $data['quantite'];
+
+    $entrepotId = null;
+
+    // Cas où on AJOUTE du stock
+    if (in_array($type, ['ENT', 'CDD'], true)) {
+        $entrepotId = $data['entrepot_destination_id'] ?? null;
+    }
+
+    if ($type === 'SPL') {
+        $entrepotId = $data['entrepot_destination_id']
+            ?? $data['entrepot_source_id']
+            ?? null;
+    }
+
+    if (!$entrepotId) {
+        return; // rien à contrôler
+    }
+
+    $entrepot = \App\Models\Entrepot::findOrFail($entrepotId);
+
+    $capaciteTotale = (float) $entrepot->capacite_totale;
+    $stockActuel = (float) \App\Models\EntrepotLot::query()
+    ->where('entrepot_id', $entrepotId)
+    ->sum('quantite');
+
+    $stockApres = $stockActuel + $quantite;
+
+    if ($stockApres > $capaciteTotale) {
+        throw new InvalidArgumentException(
+            "Capacité insuffisante pour l'entrepôt '{$entrepot->nom}'. "
+            . "Capacité maximale: {$capaciteTotale}, "
+            . "stock actuel: {$stockActuel}, "
+            . "quantité demandée: {$quantite}, "
+            . "total après mouvement: {$stockApres}."
+        );
+    }
+}
+
 
     private function applyEntree(MouvementStock $m, float $qty, string|\DateTimeInterface $dateMouvement): void
     {

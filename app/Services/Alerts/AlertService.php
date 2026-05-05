@@ -4,7 +4,10 @@ namespace App\Services\Alerts;
 
 use App\Enums\AlertStatus;
 use App\Models\Alert;
+use App\Models\AlertUserStatus;
+use App\Models\User;
 use App\Services\Mercure\MercurePublisherService;
+use Illuminate\Support\Facades\Auth;
 
 class AlertService
 {
@@ -35,6 +38,8 @@ class AlertService
 
             $freshAlert = $alert->fresh();
 
+            $this->attachAlertToUsers($freshAlert);
+
             $this->mercurePublisherService->publish('alert.updated', $freshAlert);
 
             return $freshAlert;
@@ -55,9 +60,45 @@ class AlertService
 
         $freshAlert = $newAlert->fresh();
 
+        $this->attachAlertToUsers($freshAlert);
+
         $this->mercurePublisherService->publish('alert.created', $freshAlert);
 
         return $freshAlert;
+    }
+
+    private function attachAlertToUsers(Alert $alert): void
+    {
+        $roles = match ($alert->entity_type) {
+            'contrat' => ['ADMIN', 'RESPONSABLE_APPROVISIONNEMENT'],
+            'bon_livraison' => ['ADMIN', 'RESPONSABLE_APPROVISIONNEMENT'],
+            'commande' => ['ADMIN', 'RESPONSABLE_APPROVISIONNEMENT'],
+            'fournisseur' => ['ADMIN', 'RESPONSABLE_APPROVISIONNEMENT'],
+
+            'entrepot' => ['ADMIN', 'RESPONSABLE_STOCKAGE'],
+            'stock' => ['ADMIN', 'RESPONSABLE_STOCKAGE'],
+            'mouvement_stock' => ['ADMIN', 'RESPONSABLE_STOCKAGE'],
+
+            'facture' => ['ADMIN', 'RESPONSABLE_FINANCE'],
+
+            default => ['ADMIN'],
+        };
+
+        $users = User::whereIn('role', $roles)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($users as $user) {
+            AlertUserStatus::firstOrCreate(
+                [
+                    'alert_id' => $alert->id,
+                    'user_id' => $user->id,
+                ],
+                [
+                    'status' => AlertStatus::UNREAD,
+                ]
+            );
+        }
     }
 
     public function resolve(string $type, ?string $entityType, $entityId): void
@@ -73,23 +114,42 @@ class AlertService
 
     public function markAsRead(int $id): ?Alert
     {
+        $user = Auth::guard('api')->user();
+
+        if (!$user) {
+            return null;
+        }
+
         $alert = Alert::find($id);
 
         if (!$alert) {
             return null;
         }
 
-        $alert->update([
-            'status' => AlertStatus::READ,
-            'read_at' => now(),
-        ]);
+        AlertUserStatus::updateOrCreate(
+            [
+                'alert_id' => $alert->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'status' => AlertStatus::READ,
+                'read_at' => now(),
+            ]
+        );
 
         return $alert->fresh();
     }
 
     public function markAllAsRead(): int
     {
-        return Alert::where('status', AlertStatus::UNREAD)
+        $user = Auth::guard('api')->user();
+
+        if (!$user) {
+            return 0;
+        }
+
+        return AlertUserStatus::where('user_id', $user->id)
+            ->where('status', AlertStatus::UNREAD)
             ->update([
                 'status' => AlertStatus::READ,
                 'read_at' => now(),
@@ -98,18 +158,55 @@ class AlertService
 
     public function archive(int $id): ?Alert
     {
+        $user = Auth::guard('api')->user();
+
+        if (!$user) {
+            return null;
+        }
+
         $alert = Alert::find($id);
 
         if (!$alert) {
             return null;
         }
 
-        $alert->update([
-            'status' => AlertStatus::ARCHIVED,
-            'archived_at' => now(),
-            'is_active' => false,
-        ]);
+        AlertUserStatus::updateOrCreate(
+            [
+                'alert_id' => $alert->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'status' => AlertStatus::ARCHIVED,
+                'archived_at' => now(),
+            ]
+        );
 
         return $alert->fresh();
     }
+
+
+    public function attachExistingAlertsToUser(User $user): int
+{
+    $alerts = Alert::where('is_active', true)->get();
+
+    $created = 0;
+
+    foreach ($alerts as $alert) {
+        $status = AlertUserStatus::firstOrCreate(
+            [
+                'alert_id' => $alert->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'status' => AlertStatus::UNREAD,
+            ]
+        );
+
+        if ($status->wasRecentlyCreated) {
+            $created++;
+        }
+    }
+
+    return $created;
+}
 }

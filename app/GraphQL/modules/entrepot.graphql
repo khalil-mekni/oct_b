@@ -26,7 +26,7 @@ type EntrepotLot {
 }
 
 input CreateEntrepotInput {
-  nom: String!
+  name: String!
   adresse: String
   capacite_totale: Float!
   statut: String

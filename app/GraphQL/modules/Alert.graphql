@@ -4,15 +4,17 @@ type Alert {
     title: String!
     message: String!
     severity: String!
-    status: String!
+
+    user_status: String
+    user_read_at: DateTime
+    user_archived_at: DateTime
+
     entity_type: String
     entity_id: ID
     action_url: String
     is_active: Boolean!
     created_at: DateTime
     updated_at: DateTime
-    read_at: DateTime
-    archived_at: DateTime
 }
 
 extend type Query {
@@ -23,18 +25,23 @@ extend type Query {
         is_active: Boolean
     ): [Alert!]!
         @field(resolver: "App\\GraphQL\\Queries\\AlertQuery@list")
+        @guard(with: ["api"])
 
     unreadAlertsCount: Int!
         @field(resolver: "App\\GraphQL\\Queries\\AlertQuery@unreadCount")
+        @guard(with: ["api"])
 }
 
 extend type Mutation {
     markAlertAsRead(id: ID!): Alert
         @field(resolver: "App\\GraphQL\\Mutations\\AlertMutation@markAsRead")
+        @guard(with: ["api"])
 
     markAllAlertsAsRead: Boolean!
         @field(resolver: "App\\GraphQL\\Mutations\\AlertMutation@markAllAsRead")
+        @guard(with: ["api"])
 
     archiveAlert(id: ID!): Alert
         @field(resolver: "App\\GraphQL\\Mutations\\AlertMutation@archive")
+        @guard(with: ["api"])
 }

@@ -4,6 +4,7 @@ namespace App\GraphQL\Mutations;
 
 use App\Models\Emballage;
 use App\Services\EmballageService;
+use GraphQL\Error\Error;
 
 class EmbballageMutator
 {
@@ -11,13 +12,21 @@ class EmbballageMutator
 
     public function create($_, array $args): Emballage
     {
-        return $this->service->create($args['input']);
+        try {
+            return $this->service->create($args['input']);
+        } catch (\InvalidArgumentException $e) {
+            throw new Error($e->getMessage());
+        }
     }
 
     public function update($_, array $args): Emballage
     {
-        $emballage = Emballage::findOrFail($args['id']);
-        return $this->service->update($emballage, $args['input']);
+        try {
+            $emballage = Emballage::findOrFail($args['id']);
+            return $this->service->update($emballage, $args['input']);
+        } catch (\InvalidArgumentException $e) {
+            throw new Error($e->getMessage());
+        }
     }
 
     public function delete($_, array $args): Emballage

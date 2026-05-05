@@ -3,7 +3,6 @@
 namespace App\GraphQL\Queries\Dashboard;
 
 use App\Models\MouvementStock;
-use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
 final class StockMovementsStats
@@ -15,27 +14,41 @@ final class StockMovementsStats
         [$startDate, $endDate] = $this->resolvePeriod($period);
 
         $rows = MouvementStock::query()
-            ->selectRaw('DATE(created_at) as movement_date, type_mouvement, COUNT(*) as total')
-            ->whereBetween('created_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
-            ->groupByRaw('DATE(created_at), type_mouvement')
+            ->selectRaw('DATE(date_mouvement) as movement_date, type_mouvement, COUNT(*) as total')
+            ->where('statut', 'VALIDE')
+            ->whereBetween('date_mouvement', [
+                $startDate->copy()->startOfDay(),
+                $endDate->copy()->endOfDay(),
+            ])
+            ->groupByRaw('DATE(date_mouvement), type_mouvement')
             ->orderBy('movement_date')
             ->get();
 
         $grouped = [];
+
         foreach ($rows as $row) {
             $date = $row->movement_date;
             $grouped[$date][$row->type_mouvement] = (int) $row->total;
         }
 
         $result = [];
+
         foreach (CarbonPeriod::create($startDate, $endDate) as $date) {
             $key = $date->format('Y-m-d');
+
+            $entrees = (int) ($grouped[$key]['ENT'] ?? 0);
+            $productionSorties = (int) ($grouped[$key]['PRD'] ?? 0);
+            $pertes = (int) ($grouped[$key]['PTE'] ?? 0);
+            $transferts = (int) ($grouped[$key]['CDD'] ?? 0);
+            $splits = (int) ($grouped[$key]['SPL'] ?? 0);
+
             $result[] = [
                 'label' => $date->format('d M'),
-                'in_count' => (int) ($grouped[$key]['ENT'] ?? 0),
-                'out_count' => (int) ($grouped[$key]['PTE'] ?? 0),
-                'transfer_count' => (int) ($grouped[$key]['CDD'] ?? 0),
-                'loss_count' => (int) (($grouped[$key]['PRD'] ?? 0) + ($grouped[$key]['SPL'] ?? 0)),
+                'in_count' => $entrees,
+                'out_count' => $productionSorties + $pertes,
+                'transfer_count' => $transferts,
+                'loss_count' => $pertes,
+                'split_count' => $splits,
             ];
         }
 

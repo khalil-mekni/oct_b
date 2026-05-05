@@ -1,12 +1,14 @@
 <?php
+
 namespace App\GraphQL\Mutations;
 
 use App\Services\Alerts\AlertService;
 
 class AlertMutation
 {
-    public function __construct(private AlertService $alertService)
-    {
+    public function __construct(
+        private AlertService $alertService
+    ) {
     }
 
     public function markAsRead($_, array $args)
@@ -14,9 +16,10 @@ class AlertMutation
         return $this->alertService->markAsRead((int) $args['id']);
     }
 
-    public function markAllAsRead()
+    public function markAllAsRead(): bool
     {
         $this->alertService->markAllAsRead();
+
         return true;
     }
 
