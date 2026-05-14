@@ -1,4 +1,5 @@
 scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
+<<<<<<< HEAD
 scalar Date @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date")
 scalar Upload @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Upload")
 
@@ -20,4 +21,11 @@ type Mutation
 #import modules/facture.graphql
 #import modules/Alert.graphql
 #import modules/dashboard.graphql
-
+#import modules/prediction_emballage.graphql
+=======
+#import modules/emballage.graphql
+#import modules/entrepot.graphql
+#import modules/stock.graphql
+#import modules/mouvement_stock.graphql
+#import modules/lot.graphql
+>>>>>>> origin/main

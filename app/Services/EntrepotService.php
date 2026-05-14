@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Entrepot;
+
 use App\Services\Alerts\AlertScanTriggerService;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -139,5 +140,6 @@ class EntrepotService
         }
 
         return $entrepot;
+
     }
 }
