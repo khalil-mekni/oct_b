@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/ml_service/x/__pycache__
+/ml_service/x/venv
+/ml_service/venv
