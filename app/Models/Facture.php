@@ -44,10 +44,10 @@ class Facture extends Model
     /**
      * Gardé pour ton code actuel
      */
-    public function bonLivraison()
-    {
-        return $this->belongsTo(BonLivraison::class);
-    }
+  public function bonLivraison()
+{
+    return $this->belongsTo(BonLivraison::class, 'bon_livraison_id');
+}
 
     public function emballage()
     {

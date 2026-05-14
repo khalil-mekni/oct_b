@@ -1,0 +1,15 @@
+type PredictionEmballage {
+  periode: String!
+  quantite_predite: Float!
+}
+
+extend type Query {
+  predictionEmballage(
+    emballage_id: ID!
+    entrepot_id: ID!
+    granularity: String
+    periods: Int
+    start_date: String
+  ): [PredictionEmballage!]!
+    @field(resolver: "App\\GraphQL\\Queries\\PredictionEmballageQuery")
+}

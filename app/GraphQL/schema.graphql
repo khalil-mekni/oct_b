@@ -20,4 +20,4 @@ type Mutation
 #import modules/facture.graphql
 #import modules/Alert.graphql
 #import modules/dashboard.graphql
-
+#import modules/prediction_emballage.graphql

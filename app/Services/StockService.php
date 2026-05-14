@@ -78,29 +78,22 @@ class StockService
         });
     }
 
-    public function getTheoriqueAt(
-        int $entrepotId,
-        int $emballageId,
-        ?int $lotId,
-        string|\DateTimeInterface $dateTime
-    ): float {
-        $dt = Carbon::parse($dateTime);
+   public function getTheoriqueAt(
+    int $entrepotId,
+    int $emballageId,
+    ?int $lotId = null,
+    $dateTime = null
+): float {
+    $query = DB::table('entrepot_lots')
+        ->where('entrepot_id', $entrepotId)
+        ->where('emballage_id', $emballageId);
 
-        $finale = Stock::query()
-            ->where('entrepot_id', $entrepotId)
-            ->where('emballage_id', $emballageId)
-            ->when(
-                $lotId !== null,
-                fn ($query) => $query->where('lot_id', $lotId),
-                fn ($query) => $query->whereNull('lot_id')
-            )
-            ->where('date_stock', '<=', $dt)
-            ->orderByDesc('date_stock')
-            ->orderByDesc('id')
-            ->value('quantite_finale');
-
-        return $finale !== null ? (float) $finale : 0.0;
+    if ($lotId !== null) {
+        $query->where('lot_id', $lotId);
     }
+
+    return (float) $query->sum('quantite');
+}
 
     public function getDisponibleAt(
         int $entrepotId,

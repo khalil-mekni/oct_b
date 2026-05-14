@@ -44,4 +44,8 @@ class BonLivraison extends Model
     {
         return $this->belongsTo(Contrat::class);
     }
+    public function facture()
+{
+    return $this->hasOne(Facture::class, 'bon_livraison_id');
+}
 }
