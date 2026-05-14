@@ -27,9 +27,6 @@ return new class extends Migration
             // 2) Add lot_id
             if (!Schema::hasColumn('mouvement_stocks', 'lot_id')) {
                 $table->unsignedBigInteger('lot_id')->nullable()->after('emballage_id');
-
-                $table->unsignedBigInteger('lot_id')->nullable()->after('article_ref');
- 
                 $table->index('lot_id');
             }
 

@@ -1,9 +1,8 @@
 <?php declare(strict_types=1);
-use GraphQL\Validator\Rules\QuerySecurityRule;
 
 return [
     /*
-    |--------------------------------------------   ------------------------------
+    |--------------------------------------------------------------------------
     | Route Configuration
     |--------------------------------------------------------------------------
     |
@@ -213,21 +212,8 @@ return [
     |
     */
 
-
     'query_depth' => (int) env('LIGHTHOUSE_QUERY_DEPTH', 15),
 'query_complexity' => (int) env('LIGHTHOUSE_QUERY_COMPLEXITY', 200),
-
-    'security' => [
-    // Mettre une valeur très grande = pas de limite en pratique
-    'max_query_complexity' => 999999,
-    'max_query_depth' => 999999,
-
-    'disable_introspection' => (bool) env('LIGHTHOUSE_SECURITY_DISABLE_INTROSPECTION', false)
-        ? GraphQL\Validator\Rules\DisableIntrospection::ENABLED
-        : GraphQL\Validator\Rules\DisableIntrospection::DISABLED,
-],
-
-
     /*
     |--------------------------------------------------------------------------
     | Pagination

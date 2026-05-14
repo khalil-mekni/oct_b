@@ -3,7 +3,6 @@
 namespace App\GraphQL\Mutations;
 
 use App\Models\Entrepot;
-
 use RuntimeException;
 
 class EntrepotMutator
@@ -57,6 +56,5 @@ class EntrepotMutator
         $entrepot->update($data);
 
         return $entrepot->refresh();
-
     }
 }
