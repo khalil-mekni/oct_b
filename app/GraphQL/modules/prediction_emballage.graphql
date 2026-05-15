@@ -7,7 +7,7 @@ type PredictionEmballage {
 extend type Query {
   predictionEmballage(
     emballage_id: ID!
-    entrepot_id: ID!
+    entrepot_id: ID
     granularity: String
     periods: Int
     start_date: String

@@ -175,7 +175,7 @@ def predict_single(data: PredictionInput):
     """
     if model is None:
         raise HTTPException(status_code=503, detail="Modèle ML non disponible")
-    if emballage_id := data.emballage_id not in EMBALLAGES_REF:
+    if data.emballage_id not in EMBALLAGES_REF:
         raise HTTPException(status_code=400, detail=f"emballage_id {data.emballage_id} invalide")
     if data.entrepot_id not in ENTREPOTS_REF:
         raise HTTPException(status_code=400, detail=f"entrepot_id {data.entrepot_id} invalide")

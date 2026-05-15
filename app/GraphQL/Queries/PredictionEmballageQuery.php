@@ -7,6 +7,7 @@ use App\Models\Entrepot;
 use App\Models\MouvementStock;
 use App\Services\PredictionEmballageService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class PredictionEmballageQuery
 {
@@ -18,81 +19,118 @@ class PredictionEmballageQuery
     public function __invoke($_, array $args): array
     {
         $emballage = Emballage::findOrFail($args['emballage_id']);
-        $entrepot = Entrepot::findOrFail($args['entrepot_id']);
+        
+        $entrepots = [];
+        if (isset($args['entrepot_id']) && !empty($args['entrepot_id'])) {
+            $entrepots = [Entrepot::findOrFail($args['entrepot_id'])];
+        } else {
+            $entrepots = Entrepot::all();
+        }
 
         $granularity = $args['granularity'] ?? 'month';
         $periods = $args['periods'] ?? 12;
-        $startDate = Carbon::parse($args['start_date'] ?? now());
+        
+        // Validation and limit to prevent request flood
+        $maxPeriods = ($granularity === 'day') ? 366 : 36;
+        if ($periods > $maxPeriods) {
+            Log::warning("Prediction periods capped from {$periods} to {$maxPeriods}");
+            $periods = $maxPeriods;
+        }
+        if ($periods < 1) {
+            $periods = 1;
+        }
 
-        $results = [];
+        $startDate = Carbon::parse($args['start_date'] ?? now());
         $unite = $this->getBusinessUnit($emballage);
+        
+        $allPayloads = [];
+        $periodMetadata = [];
 
         for ($i = 0; $i < $periods; $i++) {
             if ($granularity === 'day') {
                 $date = $startDate->copy()->addDays($i);
-
-                $payload = $this->buildPayload($emballage, $entrepot, $date);
-                $prediction = $this->predictionService->predict($payload);
-
-                $results[] = [
+                $count = 0;
+                foreach ($entrepots as $entrepot) {
+                    $allPayloads[] = $this->buildPayload($emballage, $entrepot, $date);
+                    $count++;
+                }
+                $periodMetadata[] = [
                     'periode' => $date->format('Y-m-d'),
-                    'quantite_predite' => $prediction['quantite_predite'] ?? 0,
-                    'unite' => $unite,
+                    'count' => $count
                 ];
             }
 
             if ($granularity === 'month') {
                 $monthDate = $startDate->copy()->addMonths($i)->startOfMonth();
-
-                $quantity = $this->predictPeriodTotal(
-                    emballage: $emballage,
-                    entrepot: $entrepot,
-                    start: $monthDate->copy()->startOfMonth(),
-                    end: $monthDate->copy()->endOfMonth()
-                );
-
-                $results[] = [
+                $start = $monthDate->copy()->startOfMonth();
+                $end = $monthDate->copy()->endOfMonth();
+                
+                $totalCount = 0;
+                foreach ($entrepots as $entrepot) {
+                    $date = $start->copy();
+                    while ($date->lte($end)) {
+                        $allPayloads[] = $this->buildPayload($emballage, $entrepot, $date);
+                        $date->addDay();
+                        $totalCount++;
+                    }
+                }
+                
+                $periodMetadata[] = [
                     'periode' => $monthDate->format('Y-m-d'),
-                    'quantite_predite' => round($quantity, 2),
-                    'unite' => $unite,
+                    'count' => $totalCount
                 ];
             }
 
             if ($granularity === 'year') {
                 $yearDate = $startDate->copy()->addYears($i)->startOfYear();
+                $start = $yearDate->copy()->startOfYear();
+                $end = $yearDate->copy()->endOfYear();
 
-                $quantity = $this->predictPeriodTotal(
-                    emballage: $emballage,
-                    entrepot: $entrepot,
-                    start: $yearDate->copy()->startOfYear(),
-                    end: $yearDate->copy()->endOfYear()
-                );
+                $totalCount = 0;
+                foreach ($entrepots as $entrepot) {
+                    $date = $start->copy();
+                    while ($date->lte($end)) {
+                        $allPayloads[] = $this->buildPayload($emballage, $entrepot, $date);
+                        $date->addDay();
+                        $totalCount++;
+                    }
+                }
 
-                $results[] = [
+                $periodMetadata[] = [
                     'periode' => $yearDate->format('Y-m-d'),
-                    'quantite_predite' => round($quantity, 2),
-                    'unite' => $unite,
+                    'count' => $totalCount
                 ];
             }
         }
 
-        return $results;
-    }
+        // ONE BATCH CALL to ML Service
+        Log::info("Sending batch prediction request", [
+            'payload_count' => count($allPayloads),
+            'periods' => $periods,
+            'granularity' => $granularity
+        ]);
 
-    private function predictPeriodTotal($emballage, $entrepot, Carbon $start, Carbon $end): float
-    {
-        $payloads = [];
-        $date = $start->copy();
+        $predictions = count($allPayloads) > 0 
+            ? $this->predictionService->predictBatch($allPayloads) 
+            : [];
 
-        while ($date->lte($end)) {
-            $payloads[] = $this->buildPayload($emballage, $entrepot, $date);
-            $date->addDay();
+        // Distribute results back to periods
+        $results = [];
+        $currentIndex = 0;
+        foreach ($periodMetadata as $meta) {
+            $periodPredictions = array_slice($predictions, $currentIndex, $meta['count']);
+            $totalQuantity = collect($periodPredictions)->sum(fn($item) => (float)($item['quantite_predite'] ?? 0));
+            
+            $results[] = [
+                'periode' => $meta['periode'],
+                'quantite_predite' => round($totalQuantity, 2),
+                'unite' => $unite,
+            ];
+            
+            $currentIndex += $meta['count'];
         }
 
-        $predictions = $this->predictionService->predictBatch($payloads);
-
-        return collect($predictions)
-            ->sum(fn ($item) => (float) ($item['quantite_predite'] ?? 0));
+        return $results;
     }
 
     private function buildPayload($emballage, $entrepot, Carbon $date): array

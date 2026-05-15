@@ -72,7 +72,7 @@ class PredictionEmballageController extends Controller
 
         try {
             $response = Http::timeout(60)
-                ->post("{$this->fastApiUrl}/predict/batch", $validated);
+                ->post("{$this->fastApiUrl}/predict-batch", $validated);
 
             if ($response->failed()) {
                 return response()->json([
