@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
 from feature_builder import build_features
+from typing import List
 
 app = FastAPI(title="API ML Prediction Emballage OCT")
 
@@ -49,3 +50,19 @@ def predict(payload: PredictionRequest):
     return {
         "quantite_predite": round(prediction, 2)
     }
+
+
+@app.post("/predict-batch")
+def predict_batch(payloads: List[PredictionRequest]):
+    results = []
+
+    for payload in payloads:
+        features = build_features(payload.dict())
+        prediction = model.predict(features)[0]
+        prediction = max(0, float(prediction))
+
+        results.append({
+            "quantite_predite": round(prediction, 2)
+        })
+
+    return results

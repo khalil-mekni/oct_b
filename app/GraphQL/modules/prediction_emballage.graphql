@@ -1,6 +1,7 @@
 type PredictionEmballage {
   periode: String!
   quantite_predite: Float!
+  unite: String!
 }
 
 extend type Query {

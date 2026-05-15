@@ -7,7 +7,6 @@ use App\Models\Entrepot;
 use App\Models\MouvementStock;
 use App\Services\PredictionEmballageService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class PredictionEmballageQuery
 {
@@ -26,30 +25,74 @@ class PredictionEmballageQuery
         $startDate = Carbon::parse($args['start_date'] ?? now());
 
         $results = [];
+        $unite = $this->getBusinessUnit($emballage);
 
         for ($i = 0; $i < $periods; $i++) {
-            $date = match ($granularity) {
-                'day' => $startDate->copy()->addDays($i),
-                'month' => $startDate->copy()->addMonths($i),
-                'year' => $startDate->copy()->addYears($i),
-                default => $startDate->copy()->addMonths($i),
-            };
+            if ($granularity === 'day') {
+                $date = $startDate->copy()->addDays($i);
 
-            $payload = $this->buildPayload(
-                emballage: $emballage,
-                entrepot: $entrepot,
-                date: $date
-            );
+                $payload = $this->buildPayload($emballage, $entrepot, $date);
+                $prediction = $this->predictionService->predict($payload);
 
-            $prediction = $this->predictionService->predict($payload);
+                $results[] = [
+                    'periode' => $date->format('Y-m-d'),
+                    'quantite_predite' => $prediction['quantite_predite'] ?? 0,
+                    'unite' => $unite,
+                ];
+            }
 
-            $results[] = [
-                'periode' => $date->format('Y-m-d'),
-                'quantite_predite' => $prediction['quantite_predite'] ?? 0,
-            ];
+            if ($granularity === 'month') {
+                $monthDate = $startDate->copy()->addMonths($i)->startOfMonth();
+
+                $quantity = $this->predictPeriodTotal(
+                    emballage: $emballage,
+                    entrepot: $entrepot,
+                    start: $monthDate->copy()->startOfMonth(),
+                    end: $monthDate->copy()->endOfMonth()
+                );
+
+                $results[] = [
+                    'periode' => $monthDate->format('Y-m-d'),
+                    'quantite_predite' => round($quantity, 2),
+                    'unite' => $unite,
+                ];
+            }
+
+            if ($granularity === 'year') {
+                $yearDate = $startDate->copy()->addYears($i)->startOfYear();
+
+                $quantity = $this->predictPeriodTotal(
+                    emballage: $emballage,
+                    entrepot: $entrepot,
+                    start: $yearDate->copy()->startOfYear(),
+                    end: $yearDate->copy()->endOfYear()
+                );
+
+                $results[] = [
+                    'periode' => $yearDate->format('Y-m-d'),
+                    'quantite_predite' => round($quantity, 2),
+                    'unite' => $unite,
+                ];
+            }
         }
 
         return $results;
+    }
+
+    private function predictPeriodTotal($emballage, $entrepot, Carbon $start, Carbon $end): float
+    {
+        $payloads = [];
+        $date = $start->copy();
+
+        while ($date->lte($end)) {
+            $payloads[] = $this->buildPayload($emballage, $entrepot, $date);
+            $date->addDay();
+        }
+
+        $predictions = $this->predictionService->predictBatch($payloads);
+
+        return collect($predictions)
+            ->sum(fn ($item) => (float) ($item['quantite_predite'] ?? 0));
     }
 
     private function buildPayload($emballage, $entrepot, Carbon $date): array
@@ -64,13 +107,14 @@ class PredictionEmballageQuery
             ->limit(30)
             ->get();
 
-        $consommations = $historique->pluck('quantite')->map(fn ($q) => (float) $q)->values();
+        $consommations = $historique
+            ->pluck('quantite')
+            ->map(fn ($q) => (float) $q)
+            ->values();
 
         $consommationJ1 = $consommations->get(0, 0);
         $consommationJ7 = $consommations->take(7)->avg() ?? 0;
         $consommationJ30 = $consommations->take(30)->avg() ?? 0;
-
-        $rollingStd30 = $this->std($consommations->take(30)->toArray());
 
         return [
             'date_prediction' => $date->format('Y-m-d'),
@@ -78,8 +122,8 @@ class PredictionEmballageQuery
             'emballage_id' => $emballage->id,
             'entrepot_id' => $entrepot->id,
 
-            'type_emballage' => $emballage->type ?? $emballage->nom ?? 'UNKNOWN',
-            'region' => $entrepot->region ?? $entrepot->nom ?? 'UNKNOWN',
+            'type_emballage' => $emballage->name ?? $emballage->type ?? 'UNKNOWN',
+            'region' => $entrepot->nom ?? 'UNKNOWN',
 
             'prix_unitaire' => $emballage->prix_unitaire ?? 0,
             'capacite_totale' => $entrepot->capacite_totale ?? 1,
@@ -100,7 +144,7 @@ class PredictionEmballageQuery
 
             'rolling_mean_7j' => $consommationJ7,
             'rolling_mean_30j' => $consommationJ30,
-            'rolling_std_30j' => $rollingStd30,
+            'rolling_std_30j' => $this->std($consommations->take(30)->toArray()),
         ];
     }
 
@@ -121,4 +165,26 @@ class PredictionEmballageQuery
 
         return sqrt($variance);
     }
+    private function getBusinessUnit($emballage): string
+{
+    $type = strtolower($emballage->type ?? $emballage->name ?? '');
+
+    if (str_contains($type, 'sac')) {
+        return 'sacs';
+    }
+
+    if (str_contains($type, 'carton')) {
+        return 'cartons';
+    }
+
+    if (str_contains($type, 'palette')) {
+        return 'palettes';
+    }
+
+    if (str_contains($type, 'bidon')) {
+        return 'bidons';
+    }
+
+    return 'unités';
+}
 }
