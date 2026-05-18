@@ -21,14 +21,14 @@ class MouvementStockService
     ) {
     }
 
-    public function createDraft(array $data): MouvementStock
+   public function createDraft(array $data): MouvementStock
 {
     $this->validateDraft($data);
 
-    // ✅ AJOUT DU CONTROLE CAPACITE
+    // Contrôle capacité
     $this->validateWarehouseCapacity($data);
 
-    return MouvementStock::create([
+    $mouvement = MouvementStock::create([
         'code_mouvement' => $data['code_mouvement'] ?? $this->generateCodeMouvement(),
         'type_mouvement' => $data['type_mouvement'],
         'emballage_id' => (int) $data['emballage_id'],
@@ -39,7 +39,14 @@ class MouvementStockService
         'date_mouvement' => $data['date_mouvement'] ?? now(),
         'user_id' => Auth::id() ?? ($data['user_id'] ?? null),
         'statut' => 'BROUILLON',
-    ])->refresh();
+    ]);
+
+    // SPL : validation automatique + création nouveau lot dans applySplit()
+    if ($mouvement->type_mouvement === 'SPL') {
+        return $this->validateMovement($mouvement);
+    }
+
+    return $mouvement->refresh();
 }
 
     public function validateMovement(MouvementStock $m): MouvementStock
@@ -329,44 +336,48 @@ class MouvementStockService
     }
 
     private function applySplit(MouvementStock $m, float $qty, string|\DateTimeInterface $dateMouvement): void
-    {
-        $target = $m->entrepot_destination_id ?? $m->entrepot_source_id;
-
-        if (!$target) {
-            throw new InvalidArgumentException("SPL : entrepôt requis.");
-        }
-
-        if (!$m->lot_id) {
-            throw new InvalidArgumentException("lot_id requis.");
-        }
-
-        $lot = $this->getLockedLotForMovement(
-            lotId: (int) $m->lot_id,
-            emballageId: (int) $m->emballage_id
-        );
-
-        $this->entrepotLotService->addToEntrepot(
-            entrepotId: (int) $target,
-            lotId: (int) $lot->id,
-            emballageId: (int) $m->emballage_id,
-            quantite: $qty
-        );
-
-        $lot->update([
-            'quantite' => (float) $lot->quantite + $qty,
-        ]);
-
-        $this->stockService->createHistoryLine(
-            entrepotId: (int) $target,
-            emballageId: (int) $m->emballage_id,
-            lotId: (int) $lot->id,
-            dateStock: $dateMouvement,
-            quantite: $qty,
-            sens: 'E',
-            userId: $m->user_id
-        );
+{
+    if (!$m->entrepot_destination_id) {
+        throw new InvalidArgumentException("SPL : destination requise.");
     }
 
+    if ($m->entrepot_source_id) {
+        throw new InvalidArgumentException("SPL : source interdite.");
+    }
+
+    if ($m->lot_id) {
+        throw new InvalidArgumentException("SPL : le surplus doit créer un nouveau lot.");
+    }
+
+    $lot = Lot::create([
+        'code_lot' => $this->generateCodeLot(),
+        'emballage_id' => (int) $m->emballage_id,
+        'quantite' => $qty,
+        'date_mvt' => $dateMouvement,
+        'user_id' => $m->user_id,
+    ]);
+
+    $m->update([
+        'lot_id' => $lot->id,
+    ]);
+
+    $this->entrepotLotService->addToEntrepot(
+        entrepotId: (int) $m->entrepot_destination_id,
+        lotId: (int) $lot->id,
+        emballageId: (int) $m->emballage_id,
+        quantite: $qty
+    );
+
+    $this->stockService->createHistoryLine(
+        entrepotId: (int) $m->entrepot_destination_id,
+        emballageId: (int) $m->emballage_id,
+        lotId: (int) $lot->id,
+        dateStock: $dateMouvement,
+        quantite: $qty,
+        sens: 'E',
+        userId: $m->user_id
+    );
+}
     private function extractImpactedEntrepotIds(MouvementStock $m): array
     {
         $ids = [];
@@ -383,106 +394,129 @@ class MouvementStockService
     }
 
     private function validateDraft(array $data): void
-    {
-        $allowed = ['ENT', 'PRD', 'CDD', 'PTE', 'SPL'];
+{
+    $allowed = ['ENT', 'PRD', 'CDD', 'PTE', 'SPL'];
 
-        if (empty($data['type_mouvement']) || !in_array($data['type_mouvement'], $allowed, true)) {
-            throw new InvalidArgumentException("type_mouvement invalide.");
-        }
+    if (empty($data['type_mouvement']) || !in_array($data['type_mouvement'], $allowed, true)) {
+        throw new InvalidArgumentException("type_mouvement invalide.");
+    }
 
-        if (empty($data['emballage_id'])) {
-            throw new InvalidArgumentException("emballage_id requis.");
-        }
+    if (empty($data['emballage_id'])) {
+        throw new InvalidArgumentException("emballage_id requis.");
+    }
 
-        if (!isset($data['quantite']) || (float) $data['quantite'] <= 0) {
-            throw new InvalidArgumentException("quantite doit être > 0.");
-        }
+    if (!isset($data['quantite']) || (float) $data['quantite'] <= 0) {
+        throw new InvalidArgumentException("quantite doit être > 0.");
+    }
 
-        $type = $data['type_mouvement'];
+    $type = $data['type_mouvement'];
 
-        if ($type === 'ENT' && empty($data['entrepot_destination_id'])) {
+    if ($type === 'ENT') {
+        if (empty($data['entrepot_destination_id'])) {
             throw new InvalidArgumentException("ENT : entrepot_destination_id requis.");
         }
 
-        if (in_array($type, ['PTE', 'PRD'], true)) {
-            if (empty($data['entrepot_source_id'])) {
-                throw new InvalidArgumentException("entrepot_source_id requis.");
-            }
-
-            if (empty($data['lot_id'])) {
-                throw new InvalidArgumentException("lot_id requis.");
-            }
-        }
-
-        if ($type === 'CDD') {
-            if (empty($data['entrepot_source_id']) || empty($data['entrepot_destination_id'])) {
-                throw new InvalidArgumentException("CDD : source et destination requis.");
-            }
-
-            if (empty($data['lot_id'])) {
-                throw new InvalidArgumentException("lot_id requis.");
-            }
-
-            if ((int) $data['entrepot_source_id'] === (int) $data['entrepot_destination_id']) {
-                throw new InvalidArgumentException("CDD : la source et la destination doivent être différentes.");
-            }
+        if (!empty($data['lot_id'])) {
+            throw new InvalidArgumentException("ENT : l'entrée doit créer un nouveau lot.");
         }
     }
 
+    if ($type === 'SPL') {
+        if (empty($data['entrepot_destination_id'])) {
+            throw new InvalidArgumentException("SPL : entrepot_destination_id requis.");
+        }
+
+        if (!empty($data['lot_id'])) {
+            throw new InvalidArgumentException("SPL : le surplus doit créer un nouveau lot.");
+        }
+
+        if (!empty($data['entrepot_source_id'])) {
+            throw new InvalidArgumentException("SPL : entrepot_source_id ne doit pas être renseigné.");
+        }
+    }
+
+    if (in_array($type, ['PTE', 'PRD'], true)) {
+        if (empty($data['entrepot_source_id'])) {
+            throw new InvalidArgumentException("entrepot_source_id requis.");
+        }
+
+        if (empty($data['lot_id'])) {
+            throw new InvalidArgumentException("lot_id requis.");
+        }
+    }
+
+    if ($type === 'CDD') {
+        if (empty($data['entrepot_source_id']) || empty($data['entrepot_destination_id'])) {
+            throw new InvalidArgumentException("CDD : source et destination requis.");
+        }
+
+        if (empty($data['lot_id'])) {
+            throw new InvalidArgumentException("lot_id requis.");
+        }
+
+        if ((int) $data['entrepot_source_id'] === (int) $data['entrepot_destination_id']) {
+            throw new InvalidArgumentException("CDD : la source et la destination doivent être différentes.");
+        }
+    }
+}
     private function validateBeforeApply(MouvementStock $m): void
-    {
-        if ($m->type_mouvement === 'ENT') {
-            if (!$m->entrepot_destination_id) {
-                throw new InvalidArgumentException("ENT : destination requise.");
-            }
-
-            if ($m->lot_id) {
-                throw new InvalidArgumentException("ENT : un mouvement d'entrée ne doit pas avoir de lot existant.");
-            }
-
-            return;
+{
+    if ($m->type_mouvement === 'ENT') {
+        if (!$m->entrepot_destination_id) {
+            throw new InvalidArgumentException("ENT : destination requise.");
         }
 
-        if (in_array($m->type_mouvement, ['PRD', 'PTE'], true)) {
-            if (!$m->entrepot_source_id) {
-                throw new InvalidArgumentException("source requise.");
-            }
-
-            if (!$m->lot_id) {
-                throw new InvalidArgumentException("lot_id requis.");
-            }
-
-            return;
+        if ($m->lot_id) {
+            throw new InvalidArgumentException("ENT : un mouvement d'entrée ne doit pas avoir de lot existant.");
         }
 
-        if ($m->type_mouvement === 'CDD') {
-            if (!$m->entrepot_source_id || !$m->entrepot_destination_id) {
-                throw new InvalidArgumentException("CDD : source et destination requis.");
-            }
-
-            if (!$m->lot_id) {
-                throw new InvalidArgumentException("lot_id requis.");
-            }
-
-            if ((int) $m->entrepot_source_id === (int) $m->entrepot_destination_id) {
-                throw new InvalidArgumentException("CDD : la source et la destination doivent être différentes.");
-            }
-
-            return;
-        }
-
-        if ($m->type_mouvement === 'SPL') {
-            $target = $m->entrepot_destination_id ?? $m->entrepot_source_id;
-
-            if (!$target) {
-                throw new InvalidArgumentException("SPL : entrepot requis.");
-            }
-
-            if (!$m->lot_id) {
-                throw new InvalidArgumentException("lot_id requis.");
-            }
-        }
+        return;
     }
+
+    if ($m->type_mouvement === 'SPL') {
+        if (!$m->entrepot_destination_id) {
+            throw new InvalidArgumentException("SPL : destination requise.");
+        }
+
+        if ($m->entrepot_source_id) {
+            throw new InvalidArgumentException("SPL : source interdite.");
+        }
+
+        if ($m->lot_id) {
+            throw new InvalidArgumentException("SPL : le surplus doit créer un nouveau lot.");
+        }
+
+        return;
+    }
+
+    if (in_array($m->type_mouvement, ['PRD', 'PTE'], true)) {
+        if (!$m->entrepot_source_id) {
+            throw new InvalidArgumentException("source requise.");
+        }
+
+        if (!$m->lot_id) {
+            throw new InvalidArgumentException("lot_id requis.");
+        }
+
+        return;
+    }
+
+    if ($m->type_mouvement === 'CDD') {
+        if (!$m->entrepot_source_id || !$m->entrepot_destination_id) {
+            throw new InvalidArgumentException("CDD : source et destination requis.");
+        }
+
+        if (!$m->lot_id) {
+            throw new InvalidArgumentException("lot_id requis.");
+        }
+
+        if ((int) $m->entrepot_source_id === (int) $m->entrepot_destination_id) {
+            throw new InvalidArgumentException("CDD : la source et la destination doivent être différentes.");
+        }
+
+        return;
+    }
+}
 
     private function getLockedLotForMovement(int $lotId, int $emballageId): Lot
     {

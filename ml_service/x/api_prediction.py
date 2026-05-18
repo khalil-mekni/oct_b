@@ -46,9 +46,14 @@ def predict(payload: PredictionRequest):
 
     prediction = model.predict(features)[0]
     prediction = max(0, float(prediction))
+    
+    # Calculate predicted cost
+    prix_unitaire = float(payload.prix_unitaire)
+    cout_predit = prediction * prix_unitaire
 
     return {
-        "quantite_predite": round(prediction, 2)
+        "quantite_predite": round(prediction, 2),
+        "cout_predit": round(cout_predit, 2)
     }
 
 
@@ -60,9 +65,14 @@ def predict_batch(payloads: List[PredictionRequest]):
         features = build_features(payload.dict())
         prediction = model.predict(features)[0]
         prediction = max(0, float(prediction))
+        
+        # Calculate predicted cost
+        prix_unitaire = float(payload.prix_unitaire)
+        cout_predit = prediction * prix_unitaire
 
         results.append({
-            "quantite_predite": round(prediction, 2)
+            "quantite_predite": round(prediction, 2),
+            "cout_predit": round(cout_predit, 2)
         })
 
     return results

@@ -2,6 +2,7 @@
 
 namespace App\GraphQL\Queries;
 
+use App\Models\Contrat;
 use App\Models\Emballage;
 use App\Models\Entrepot;
 use App\Models\MouvementStock;
@@ -19,8 +20,7 @@ class PredictionEmballageQuery
     public function __invoke($_, array $args): array
     {
         $emballage = Emballage::findOrFail($args['emballage_id']);
-        
-        $entrepots = [];
+
         if (isset($args['entrepot_id']) && !empty($args['entrepot_id'])) {
             $entrepots = [Entrepot::findOrFail($args['entrepot_id'])];
         } else {
@@ -28,105 +28,87 @@ class PredictionEmballageQuery
         }
 
         $granularity = $args['granularity'] ?? 'month';
-        $periods = $args['periods'] ?? 12;
-        
-        // Validation and limit to prevent request flood
-        $maxPeriods = ($granularity === 'day') ? 366 : 36;
+        $periods = (int) ($args['periods'] ?? 12);
+
+        $maxPeriods = match ($granularity) {
+            'day' => 366,
+            'month' => 60,
+            'year' => 60,
+            default => 60,
+        };
+
         if ($periods > $maxPeriods) {
             Log::warning("Prediction periods capped from {$periods} to {$maxPeriods}");
             $periods = $maxPeriods;
         }
+
         if ($periods < 1) {
             $periods = 1;
         }
 
         $startDate = Carbon::parse($args['start_date'] ?? now());
+
         $unite = $this->getBusinessUnit($emballage);
-        
+        $prixUnitaire = $this->getPrixUnitaire($emballage);
+
         $allPayloads = [];
         $periodMetadata = [];
 
         for ($i = 0; $i < $periods; $i++) {
-            if ($granularity === 'day') {
-                $date = $startDate->copy()->addDays($i);
-                $count = 0;
-                foreach ($entrepots as $entrepot) {
-                    $allPayloads[] = $this->buildPayload($emballage, $entrepot, $date);
-                    $count++;
-                }
-                $periodMetadata[] = [
-                    'periode' => $date->format('Y-m-d'),
-                    'count' => $count
-                ];
+            $date = match ($granularity) {
+                'day' => $startDate->copy()->addDays($i),
+                'month' => $startDate->copy()->addMonths($i)->startOfMonth(),
+                'year' => $startDate->copy()->addMonths($i)->startOfMonth(),
+                default => $startDate->copy()->addMonths($i)->startOfMonth(),
+            };
+
+            $count = 0;
+
+            foreach ($entrepots as $entrepot) {
+                $allPayloads[] = $this->buildPayload($emballage, $entrepot, $date);
+                $count++;
             }
 
-            if ($granularity === 'month') {
-                $monthDate = $startDate->copy()->addMonths($i)->startOfMonth();
-                $start = $monthDate->copy()->startOfMonth();
-                $end = $monthDate->copy()->endOfMonth();
-                
-                $totalCount = 0;
-                foreach ($entrepots as $entrepot) {
-                    $date = $start->copy();
-                    while ($date->lte($end)) {
-                        $allPayloads[] = $this->buildPayload($emballage, $entrepot, $date);
-                        $date->addDay();
-                        $totalCount++;
-                    }
-                }
-                
-                $periodMetadata[] = [
-                    'periode' => $monthDate->format('Y-m-d'),
-                    'count' => $totalCount
-                ];
-            }
-
-            if ($granularity === 'year') {
-                $yearDate = $startDate->copy()->addYears($i)->startOfYear();
-                $start = $yearDate->copy()->startOfYear();
-                $end = $yearDate->copy()->endOfYear();
-
-                $totalCount = 0;
-                foreach ($entrepots as $entrepot) {
-                    $date = $start->copy();
-                    while ($date->lte($end)) {
-                        $allPayloads[] = $this->buildPayload($emballage, $entrepot, $date);
-                        $date->addDay();
-                        $totalCount++;
-                    }
-                }
-
-                $periodMetadata[] = [
-                    'periode' => $yearDate->format('Y-m-d'),
-                    'count' => $totalCount
-                ];
-            }
+            $periodMetadata[] = [
+                'periode' => $date->format('Y-m-d'),
+                'count' => $count,
+            ];
         }
 
-        // ONE BATCH CALL to ML Service
-        Log::info("Sending batch prediction request", [
+        Log::info('Sending batch prediction request', [
             'payload_count' => count($allPayloads),
             'periods' => $periods,
-            'granularity' => $granularity
+            'granularity' => $granularity,
+            'entrepots_count' => count($entrepots),
         ]);
 
-        $predictions = count($allPayloads) > 0 
-            ? $this->predictionService->predictBatch($allPayloads) 
+        $predictions = count($allPayloads) > 0
+            ? $this->predictionService->predictBatch($allPayloads)
             : [];
 
-        // Distribute results back to periods
         $results = [];
         $currentIndex = 0;
+
         foreach ($periodMetadata as $meta) {
-            $periodPredictions = array_slice($predictions, $currentIndex, $meta['count']);
-            $totalQuantity = collect($periodPredictions)->sum(fn($item) => (float)($item['quantite_predite'] ?? 0));
-            
+            $periodPredictions = array_slice(
+                $predictions,
+                $currentIndex,
+                $meta['count']
+            );
+
+            $totalQuantity = collect($periodPredictions)
+                ->sum(fn ($item) => (float) ($item['quantite_predite'] ?? 0));
+
+            $totalCost = $totalQuantity * $prixUnitaire;
+
             $results[] = [
                 'periode' => $meta['periode'],
                 'quantite_predite' => round($totalQuantity, 2),
+                'prix_unitaire' => round($prixUnitaire, 3),
+                'cout_predite' => round($totalCost, 2),
                 'unite' => $unite,
             ];
-            
+
             $currentIndex += $meta['count'];
         }
 
@@ -163,7 +145,7 @@ class PredictionEmballageQuery
             'type_emballage' => $emballage->name ?? $emballage->type ?? 'UNKNOWN',
             'region' => $entrepot->nom ?? 'UNKNOWN',
 
-            'prix_unitaire' => $emballage->prix_unitaire ?? 0,
+            'prix_unitaire' => $this->getPrixUnitaire($emballage),
             'capacite_totale' => $entrepot->capacite_totale ?? 1,
 
             'stock_initial' => $entrepot->stock_existant ?? 0,
@@ -203,26 +185,42 @@ class PredictionEmballageQuery
 
         return sqrt($variance);
     }
+
     private function getBusinessUnit($emballage): string
-{
-    $type = strtolower($emballage->type ?? $emballage->name ?? '');
+    {
+        $type = strtolower($emballage->type ?? $emballage->name ?? '');
 
-    if (str_contains($type, 'sac')) {
-        return 'sacs';
+        if (str_contains($type, 'sac')) {
+            return 'sacs';
+        }
+
+        if (str_contains($type, 'carton')) {
+            return 'cartons';
+        }
+
+        if (str_contains($type, 'palette')) {
+            return 'palettes';
+        }
+
+        if (str_contains($type, 'bidon')) {
+            return 'bidons';
+        }
+
+        return 'unités';
     }
 
-    if (str_contains($type, 'carton')) {
-        return 'cartons';
-    }
+    private function getPrixUnitaire($emballage): float
+    {
+        $contrat = Contrat::query()
+            ->where('emballage_id', $emballage->id)
+            ->where('statut', 'ACTIF')
+            ->latest('id')
+            ->first();
 
-    if (str_contains($type, 'palette')) {
-        return 'palettes';
-    }
+        if ($contrat && $contrat->prix_unitaire !== null) {
+            return (float) $contrat->prix_unitaire;
+        }
 
-    if (str_contains($type, 'bidon')) {
-        return 'bidons';
+        return (float) ($emballage->prix_unitaire ?? 0);
     }
-
-    return 'unités';
-}
 }

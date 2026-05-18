@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
+use Illuminate\Database\Eloquent\Builder;
 class MouvementStock extends Model
 {
     protected $table = 'mouvement_stocks';
@@ -50,5 +50,13 @@ class MouvementStock extends Model
     public function emballage(): BelongsTo
 {
     return $this->belongsTo(\App\Models\Emballage::class,'emballage_id');
+}
+protected static function booted(): void
+{
+    static::addGlobalScope('ordered', function (Builder $builder) {
+        $builder
+            ->orderByDesc('date_mouvement')
+            ->orderByDesc('id');
+    });
 }
 }
