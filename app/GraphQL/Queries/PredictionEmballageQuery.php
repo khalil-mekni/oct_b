@@ -5,6 +5,7 @@ namespace App\GraphQL\Queries;
 use App\Models\Contrat;
 use App\Models\Emballage;
 use App\Models\Entrepot;
+use App\Models\EntrepotLot;
 use App\Models\MouvementStock;
 use App\Services\PredictionEmballageService;
 use Carbon\Carbon;
@@ -26,6 +27,13 @@ class PredictionEmballageQuery
         } else {
             $entrepots = Entrepot::all();
         }
+
+        // Calcul du stock actuel
+        $stockActuelQuery = EntrepotLot::where('emballage_id', $emballage->id);
+        if (isset($args['entrepot_id']) && !empty($args['entrepot_id'])) {
+            $stockActuelQuery->where('entrepot_id', $args['entrepot_id']);
+        }
+        $stockActuel = (float) $stockActuelQuery->sum('quantite');
 
         $granularity = $args['granularity'] ?? 'month';
         $periods = (int) ($args['periods'] ?? 12);
@@ -101,12 +109,25 @@ class PredictionEmballageQuery
 
             $totalCost = $totalQuantity * $prixUnitaire;
 
+            // Calculs de recommandation
+            $stockSecurite = $totalQuantity * 0.20;
+            $stockRestantPrevu = $stockActuel - $totalQuantity;
+            $quantiteRecommandee = max(0, $totalQuantity + $stockSecurite - $stockActuel);
+            $coutRecommande = $quantiteRecommandee * $prixUnitaire;
+            $alerteRupture = $stockRestantPrevu <= $stockSecurite;
+
             $results[] = [
                 'periode' => $meta['periode'],
                 'quantite_predite' => round($totalQuantity, 2),
                 'prix_unitaire' => round($prixUnitaire, 3),
                 'cout_predite' => round($totalCost, 2),
                 'unite' => $unite,
+                'stock_actuel' => round($stockActuel, 2),
+                'stock_securite' => round($stockSecurite, 2),
+                'stock_restant_prevu' => round($stockRestantPrevu, 2),
+                'quantite_recommandee' => round($quantiteRecommandee, 2),
+                'cout_recommande' => round($coutRecommande, 2),
+                'alerte_rupture' => $alerteRupture,
             ];
 
             $currentIndex += $meta['count'];
@@ -211,16 +232,47 @@ class PredictionEmballageQuery
 
     private function getPrixUnitaire($emballage): float
     {
-        $contrat = Contrat::query()
+        // 1. Chercher un contrat ACTIF du même emballage avec prix_unitaire > 0
+        $contratActif = Contrat::query()
             ->where('emballage_id', $emballage->id)
             ->where('statut', 'ACTIF')
+            ->where('prix_unitaire', '>', 0)
             ->latest('id')
             ->first();
 
-        if ($contrat && $contrat->prix_unitaire !== null) {
-            return (float) $contrat->prix_unitaire;
+        if ($contratActif) {
+            return (float) $contratActif->prix_unitaire;
         }
 
-        return (float) ($emballage->prix_unitaire ?? 0);
+        // 2. Sinon chercher le dernier contrat du même emballage avec prix_unitaire > 0
+        $dernierContratAvecPrix = Contrat::query()
+            ->where('emballage_id', $emballage->id)
+            ->where('prix_unitaire', '>', 0)
+            ->latest('id')
+            ->first();
+
+        if ($dernierContratAvecPrix) {
+            return (float) $dernierContratAvecPrix->prix_unitaire;
+        }
+
+        // 3. Sinon utiliser emballage.prix_unitaire si existe et > 0
+        if (isset($emballage->prix_unitaire) && $emballage->prix_unitaire > 0) {
+            return (float) $emballage->prix_unitaire;
+        }
+
+        // 4. Sinon calculer prix_unitaire = montant_ht / quantite_contractuelle si possible
+        $dernierContrat = Contrat::query()
+            ->where('emballage_id', $emballage->id)
+            ->where('montant_ht', '>', 0)
+            ->where('quantite_contractuelle', '>', 0)
+            ->latest('id')
+            ->first();
+
+        if ($dernierContrat) {
+            return (float) ($dernierContrat->montant_ht / $dernierContrat->quantite_contractuelle);
+        }
+
+        // 5. Sinon retourner 0
+        return 0;
     }
 }

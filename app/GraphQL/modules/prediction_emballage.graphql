@@ -4,6 +4,12 @@ type PredictionEmballage {
   unite: String!
   prix_unitaire: Float!
   cout_predite: Float!
+  stock_actuel: Float!
+  stock_securite: Float!
+  stock_restant_prevu: Float!
+  quantite_recommandee: Float!
+  cout_recommande: Float!
+  alerte_rupture: Boolean!
 }
 
 extend type Query {
