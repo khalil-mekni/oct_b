@@ -51,10 +51,11 @@ type RecentMovementItem {
 
 type StockMovementStatItem {
   label: String!
-  in_count: Int!
-  out_count: Int!
-  transfer_count: Int!
-  loss_count: Int!
+  in_count: Float!
+  out_count: Float!
+  transfer_count: Float!
+  loss_count: Float!
+  surplus_count: Float!
 }
 
 extend type Query {
@@ -88,6 +89,7 @@ type ContractWidgetItem {
   reference: String!
   title: String
   partnerName: String
+  startDate: Date
   endDate: Date
   status: String!
 }
@@ -107,6 +109,8 @@ type DeliveryNoteWidgetItem {
   entrepotName: String
   date_reception: DateTime
   statut: String!
+  quantite_commandee: Float
+  quantite_recue: Float
 }
 
 type DeliveryNotesWidgetData {
@@ -129,7 +133,9 @@ type OrderWidgetItem {
 type OrdersWidgetData {
   total: Int!
   pending: Int!
+  validated_count: Int!
   partiallyReceived: Int!
+  received_count: Int!
   late: Int!
   recentOrders: [OrderWidgetItem!]!
 }

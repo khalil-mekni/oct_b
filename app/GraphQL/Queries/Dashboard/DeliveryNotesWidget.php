@@ -24,17 +24,20 @@ final class DeliveryNotesWidget
             ->count('entrepot_id');
 
         $recentDeliveryNotes = BonLivraison::query()
+            ->with(['commande', 'entrepot'])
             ->latest('created_at')
-            ->limit(6)
+            ->limit(10)
             ->get()
             ->map(function ($note) {
                 return [
                     'id' => $note->id,
                     'numero_bl' => $note->numero_bl,
-                    'commandeReference' => $note->commande->reference ?? null,
+                    'commandeReference' => $note->commande->numero_commande ?? null,
                     'entrepotName' => $note->entrepot->nom ?? null,
                     'date_reception' => $note->date_reception,
                     'statut' => $note->statut ?? 'inconnu',
+                    'quantite_commandee' => (float) ($note->commande->quantite ?? 0),
+                    'quantite_recue' => (float) ($note->quantite_recue ?? 0),
                 ];
             })
             ->values()

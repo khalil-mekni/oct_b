@@ -13,15 +13,19 @@ final class OrdersWidget
         $total = Commande::query()->count();
 
         $pending = Commande::query()
-            ->whereIn('statut', ['EN_ATTENTE', 'PENDING', 'pending'])
+            ->where('statut', 'EN_ATTENTE')
+            ->count();
+
+        $validated = Commande::query()
+            ->where('statut', 'VALIDEE')
             ->count();
 
         $partiallyReceived = Commande::query()
-            ->whereIn('statut', ['PARTIAL', 'PARTIELLE', 'PARTIELLEMENT_RECUE'])
+            ->where('statut', 'PARTIELLEMENT_RECEPTIONNEE')
             ->count();
 
-        $lateByStatus = Commande::query()
-            ->whereIn('statut', ['LATE', 'RETARD'])
+        $received = Commande::query()
+            ->where('statut', 'RECEPTIONNEE')
             ->count();
 
         $lateByAlert = Alert::query()
@@ -31,23 +35,22 @@ final class OrdersWidget
                 'ORDER_NOT_RECEIVED_ON_TIME',
             ])
             ->count();
-
-        $late = max($lateByStatus, $lateByAlert);
+        
+        $late = $lateByAlert; // Use alerts for real operational delay tracking
 
         $recentOrders = Commande::query()
+            ->with('fournisseur')
             ->latest('created_at')
             ->limit(6)
             ->get()
             ->map(function ($order) {
                 return [
                     'id' => $order->id,
-                    'reference' => $order->reference ?? ('CMD-' . $order->id),
-                    'supplierName' => $order->fournisseur->nom ?? null,
+                    'reference' => $order->numero_commande ?? ('CMD-' . $order->id),
+                    'supplierName' => $order->fournisseur->raison_sociale ?? null,
                     'date' => $order->date_commande ?? $order->created_at,
                     'status' => $order->statut ?? 'inconnu',
-                    'totalLabel' => isset($order->montant_total)
-                        ? number_format((float) $order->montant_total, 2, '.', ' ') . ' MAD'
-                        : null,
+                    'totalLabel' => $order->quantite . ' unités',
                 ];
             })
             ->values()
@@ -56,7 +59,9 @@ final class OrdersWidget
         return [
             'total' => $total,
             'pending' => $pending,
+            'validated_count' => $validated,
             'partiallyReceived' => $partiallyReceived,
+            'received_count' => $received,
             'late' => $late,
             'recentOrders' => $recentOrders,
         ];

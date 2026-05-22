@@ -13,22 +13,22 @@ final class StockMovementsStats
 
         [$startDate, $endDate] = $this->resolvePeriod($period);
 
-        $rows = MouvementStock::query()
-            ->selectRaw('DATE(date_mouvement) as movement_date, type_mouvement, COUNT(*) as total')
-            ->where('statut', 'VALIDE')
-            ->whereBetween('date_mouvement', [
-                $startDate->copy()->startOfDay(),
-                $endDate->copy()->endOfDay(),
-            ])
-            ->groupByRaw('DATE(date_mouvement), type_mouvement')
-            ->orderBy('movement_date')
-            ->get();
+        $rows = MouvementStock::withoutGlobalScope('ordered')
+    ->selectRaw('DATE(date_mouvement) as movement_date, type_mouvement, SUM(quantite) as total')
+    ->where('statut', 'VALIDE')
+    ->whereBetween('date_mouvement', [
+        $startDate->copy()->startOfDay(),
+        $endDate->copy()->endOfDay(),
+    ])
+    ->groupByRaw('DATE(date_mouvement), type_mouvement')
+    ->orderByRaw('DATE(date_mouvement) ASC')
+    ->get();
 
         $grouped = [];
 
         foreach ($rows as $row) {
             $date = $row->movement_date;
-            $grouped[$date][$row->type_mouvement] = (int) $row->total;
+            $grouped[$date][$row->type_mouvement] = (float) $row->total;
         }
 
         $result = [];
@@ -36,19 +36,19 @@ final class StockMovementsStats
         foreach (CarbonPeriod::create($startDate, $endDate) as $date) {
             $key = $date->format('Y-m-d');
 
-            $entrees = (int) ($grouped[$key]['ENT'] ?? 0);
-            $productionSorties = (int) ($grouped[$key]['PRD'] ?? 0);
-            $pertes = (int) ($grouped[$key]['PTE'] ?? 0);
-            $transferts = (int) ($grouped[$key]['CDD'] ?? 0);
-            $splits = (int) ($grouped[$key]['SPL'] ?? 0);
+            $entrees = (float) ($grouped[$key]['ENT'] ?? 0);
+            $productionSorties = (float) ($grouped[$key]['PRD'] ?? 0);
+            $pertes = (float) ($grouped[$key]['PTE'] ?? 0);
+            $transferts = (float) ($grouped[$key]['CDD'] ?? 0);
+            $surplus = (float) ($grouped[$key]['SPL'] ?? 0);
 
             $result[] = [
                 'label' => $date->format('d M'),
                 'in_count' => $entrees,
-                'out_count' => $productionSorties + $pertes,
+                'out_count' => $productionSorties,
                 'transfer_count' => $transferts,
                 'loss_count' => $pertes,
-                'split_count' => $splits,
+                'surplus_count' => $surplus,
             ];
         }
 

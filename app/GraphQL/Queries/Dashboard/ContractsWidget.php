@@ -62,6 +62,9 @@ final class ContractsWidget
                     'reference' => $contract->numero_contrat ?? ('CTR-' . $contract->id),
                     'title' => $contract->emballage?->name ?? 'Contrat',
                     'partnerName' => $contract->fournisseur?->raison_sociale,
+                    'startDate' => !empty($contract->date_debut)
+                        ? Carbon::parse($contract->date_debut)->toDateString()
+                        : null,
                     'endDate' => !empty($contract->date_fin)
                         ? Carbon::parse($contract->date_fin)->toDateString()
                         : null,
