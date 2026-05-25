@@ -90,6 +90,7 @@ class BonLivraisonService
                 'quantite' => (float) $bl->quantite_recue,
                 'date_mouvement' => $bl->date_reception,
                 'user_id' => $userId,
+                'bon_livraison_id' => $bl->id,
             ]);
 
             $total = BonLivraison::where('commande_id', $commande->id)->sum('quantite_recue');

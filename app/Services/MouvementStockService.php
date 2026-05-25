@@ -39,6 +39,7 @@ class MouvementStockService
         'date_mouvement' => $data['date_mouvement'] ?? now(),
         'user_id' => Auth::id() ?? ($data['user_id'] ?? null),
         'statut' => 'BROUILLON',
+        'bon_livraison_id' => $data['bon_livraison_id'] ?? null,
     ]);
 
     // SPL : validation automatique + création nouveau lot dans applySplit()

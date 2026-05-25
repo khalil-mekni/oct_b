@@ -3,138 +3,82 @@
 import pandas as pd
 import numpy as np
 
-
+# Les colonnes attendues par le nouveau modèle ML
 EXPECTED_COLUMNS = [
     "annee",
     "mois",
     "jour",
-    "jour_semaine",
-    "is_weekend",
-    "trimestre",
-    "emballage_id",
-    "entrepot_id",
-    "prix_unitaire",
-    "capacite_totale",
-    "stock_initial",
-    "reception_ent",
-    "transfert_in_cdd",
-    "transfert_out_cdd",
-    "stock_final",
-    "taux_occupation",
-    "contrat_actif",
-    "commandes_en_cours",
-    "consommation_j_1",
-    "consommation_j_7",
-    "consommation_j_30",
-    "rolling_mean_7j",
-    "rolling_mean_30j",
-    "rolling_std_30j",
-    "type_emballage",
-    "region",
+    "entrepot_source_id",
+    "emballage_nom",
 ]
 
-
-def get_quarter(month: int) -> int:
-    return ((month - 1) // 3) + 1
-
-
-def safe_float(value, default=0.0) -> float:
-    if value is None or value == "":
-        return default
-
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return default
-
-
-def safe_int(value, default=0) -> int:
-    if value is None or value == "":
-        return default
-
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return default
-
+# Mapping pour emballage_nom pour assurer la cohérence avec l'entraînement
+# Supporte int et str pour les clés
+EMBALLAGE_ID_TO_NAME = {
+    1: "Cartons", "1": "Cartons",
+    2: "Riz Blanc", "2": "Riz Blanc",
+    3: "Sucre Blanc", "3": "Sucre Blanc",
+    4: "Riz Étuvé", "4": "Riz Étuvé",
+    5: "Riz Basmati", "5": "Riz Basmati",
+    6: "Complexe", "6": "Complexe",
+    7: "Rouleaux Adhésifs", "7": "Rouleaux Adhésifs",
+    8: "TNCeylon 150 G", "8": "TNCeylon 150 G",
+    9: "TNExtra 250 G", "9": "TNExtra 250 G",
+    10: "TNExtra Plus 100 G", "10": "TNExtra Plus 100 G",
+    11: "TNExtra Plus 250 G", "11": "TNExtra Plus 250 G",
+    12: "TVBourgeon 250 G", "12": "TVBourgeon 250 G",
+    13: "TVSuperieur 100 G", "13": "TVSuperieur 100 G",
+    14: "TVSuperieur 250 G", "14": "TVSuperieur 250 G",
+    15: "Thermo 200µ", "15": "Thermo 200µ",
+    16: "Thermo 500µ", "16": "Thermo 500µ",
+    17: "Étirable", "17": "Étirable",
+    18: "Étirable GINOR", "18": "Étirable GINOR",
+}
 
 def build_features(payload: dict) -> pd.DataFrame:
     """
-    Construit les variables nécessaires au modèle ML.
-
-    Le payload vient de Laravel.
-    Il doit contenir les informations de l'emballage, entrepôt, stock
-    et historique de consommation.
-
-    La sortie doit garder exactement les mêmes colonnes que celles utilisées
-    pendant l'entraînement du modèle.
+    Construit les variables nécessaires au nouveau modèle ML.
     """
 
     if "date_prediction" not in payload:
-        raise ValueError("date_prediction est obligatoire.")
+        raise ValueError("Le champ 'date_prediction' est obligatoire.")
 
-    if "emballage_id" not in payload:
-        raise ValueError("emballage_id est obligatoire.")
+    # 1. Extraction temporelle
+    try:
+        prediction_date = pd.to_datetime(payload["date_prediction"])
+    except Exception as e:
+        raise ValueError(f"Format de date invalide : {e}")
 
-    if "entrepot_id" not in payload:
-        raise ValueError("entrepot_id est obligatoire.")
+    # 2. Emballage
+    emballage_id = payload.get("emballage_id")
+    emballage_nom = EMBALLAGE_ID_TO_NAME.get(emballage_id)
+    
+    if not emballage_nom:
+        # Fallback sur type_emballage envoyé par Laravel
+        emballage_nom = payload.get("type_emballage", "UNKNOWN")
+        print(f"DEBUG - Emballage ID {emballage_id} not in mapping, using fallback: {emballage_nom}")
 
-    if "type_emballage" not in payload:
-        raise ValueError("type_emballage est obligatoire.")
+    # 3. Entrepot
+    entrepot_id = payload.get("entrepot_id")
+    if entrepot_id is None:
+        raise ValueError("Le champ 'entrepot_id' est obligatoire.")
 
-    if "region" not in payload:
-        raise ValueError("region est obligatoire.")
-
-    prediction_date = pd.to_datetime(payload["date_prediction"])
-
-    stock_final = safe_float(payload.get("stock_final"), 0.0)
-    capacite_totale = safe_float(payload.get("capacite_totale"), 1.0)
-
-    if capacite_totale <= 0:
-        capacite_totale = 1.0
-
-    taux_occupation = stock_final / capacite_totale
-
+    # Construction du dictionnaire
+    # On force entrepot_source_id en float car les catégories du modèle sont [1.0, 2.0, ...]
     data = {
-        "annee": prediction_date.year,
-        "mois": prediction_date.month,
-        "jour": prediction_date.day,
-        "jour_semaine": prediction_date.dayofweek,
-        "is_weekend": 1 if prediction_date.dayofweek >= 5 else 0,
-        "trimestre": get_quarter(prediction_date.month),
-
-        "emballage_id": safe_int(payload.get("emballage_id")),
-        "entrepot_id": safe_int(payload.get("entrepot_id")),
-
-        "prix_unitaire": safe_float(payload.get("prix_unitaire")),
-        "capacite_totale": capacite_totale,
-
-        "stock_initial": safe_float(payload.get("stock_initial"), stock_final),
-        "reception_ent": safe_float(payload.get("reception_ent")),
-
-        "transfert_in_cdd": safe_float(payload.get("transfert_in_cdd")),
-        "transfert_out_cdd": safe_float(payload.get("transfert_out_cdd")),
-
-        "stock_final": stock_final,
-        "taux_occupation": taux_occupation,
-
-        "contrat_actif": safe_int(payload.get("contrat_actif")),
-        "commandes_en_cours": safe_int(payload.get("commandes_en_cours")),
-
-        "consommation_j_1": safe_float(payload.get("consommation_j_1")),
-        "consommation_j_7": safe_float(payload.get("consommation_j_7")),
-        "consommation_j_30": safe_float(payload.get("consommation_j_30")),
-
-        "rolling_mean_7j": safe_float(payload.get("rolling_mean_7j")),
-        "rolling_mean_30j": safe_float(payload.get("rolling_mean_30j")),
-        "rolling_std_30j": safe_float(payload.get("rolling_std_30j")),
-
-        "type_emballage": str(payload.get("type_emballage")),
-        "region": str(payload.get("region")),
+        "annee": int(prediction_date.year),
+        "mois": int(prediction_date.month),
+        "jour": int(prediction_date.day),
+        "entrepot_source_id": float(entrepot_id), 
+        "emballage_nom": str(emballage_nom),
     }
 
-    df = pd.DataFrame([data])
+    # Debug print pour inspecter les entrées du modèle
+    print(f"DEBUG - Model Input: {data}")
 
+    df = pd.DataFrame([data])
+    
+    # S'assurer de l'ordre exact des colonnes
     df = df[EXPECTED_COLUMNS]
 
     return df

@@ -26,37 +26,44 @@ class PredictionEmballageController extends Controller
     public function predict(Request $request): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
-            'annee'                          => 'required|integer|min:2023',
-            'mois'                           => 'required|integer|min:1|max:12',
-            'emballage_id'                   => 'required|integer|min:1|max:4',
-            'entrepot_id'                    => 'required|integer|min:1|max:17',
-            'consommation_mois'              => 'required|numeric|min:0',
-            'consommation_mois_precedent'    => 'nullable|numeric|min:0',
-            'moyenne_3_mois'                 => 'nullable|numeric|min:0',
-            'stock_fin_mois'                 => 'nullable|numeric|min:0',
-            'quantite_a_commander_estimee'   => 'nullable|numeric|min:0',
+            'annee'        => 'required|integer',
+            'mois'         => 'required|integer|min:1|max:12',
+            'emballage_id' => 'required|integer',
+            'entrepot_id'  => 'required|integer',
         ]);
 
         try {
-            $response = Http::timeout(30)
-                ->post("{$this->fastApiUrl}/predict", $validated);
-
-            if ($response->failed()) {
-                Log::error('FastAPI predict error', [
-                    'status' => $response->status(),
-                    'body'   => $response->body(),
-                ]);
-                return response()->json([
-                    'error' => 'Erreur service IA',
-                    'detail' => $response->json('detail', 'Erreur inconnue'),
-                ], $response->status());
+            $startDate = \Carbon\Carbon::create($validated['annee'], $validated['mois'], 1);
+            $daysInMonth = $startDate->daysInMonth;
+            
+            $allPayloads = [];
+            for ($d = 0; $d < $daysInMonth; $d++) {
+                $currentDate = $startDate->copy()->addDays($d);
+                $allPayloads[] = [
+                    'date_prediction' => $currentDate->format('Y-m-d'),
+                    'emballage_id'    => (int)$validated['emballage_id'],
+                    'entrepot_id'     => (int)$validated['entrepot_id'],
+                    'prix_unitaire'   => 0, // Fallback
+                ];
             }
 
-            return response()->json($response->json());
+            $response = Http::timeout(60)
+                ->post("{$this->fastApiUrl}/predict-batch", $allPayloads);
+
+            if ($response->failed()) {
+                return response()->json(['error' => 'Erreur service IA'], $response->status());
+            }
+
+            $predictions = $response->json();
+            $totalQuantity = collect($predictions)->sum('quantite_predite');
+
+            return response()->json([
+                'quantite_predite' => round($totalQuantity, 2),
+                'unite'            => 'unités',
+            ]);
 
         } catch (\Exception $e) {
-            Log::error('FastAPI unreachable', ['message' => $e->getMessage()]);
-            return response()->json(['error' => 'Service IA indisponible'], 503);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
@@ -64,28 +71,53 @@ class PredictionEmballageController extends Controller
     public function predictBatch(Request $request): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validate([
-            'annee'        => 'required|integer|min:2023',
+            'annee'        => 'required|integer',
             'mois'         => 'required|integer|min:1|max:12',
-            'emballage_id' => 'nullable|integer|min:1|max:4',
-            'entrepot_id'  => 'nullable|integer|min:1|max:17',
+            'emballage_id' => 'nullable|integer',
+            'entrepot_id'  => 'nullable|integer',
         ]);
 
         try {
-            $response = Http::timeout(60)
-                ->post("{$this->fastApiUrl}/predict-batch", $validated);
+            $emballages = $validated['emballage_id'] 
+                ? [\App\Models\Emballage::findOrFail($validated['emballage_id'])]
+                : \App\Models\Emballage::all();
+                
+            $entrepots = $validated['entrepot_id']
+                ? [\App\Models\Entrepot::findOrFail($validated['entrepot_id'])]
+                : \App\Models\Entrepot::all();
 
-            if ($response->failed()) {
-                return response()->json([
-                    'error' => 'Erreur service IA batch',
-                    'detail' => $response->json('detail', 'Erreur inconnue'),
-                ], $response->status());
+            $startDate = \Carbon\Carbon::create($validated['annee'], $validated['mois'], 1);
+            $daysInMonth = $startDate->daysInMonth;
+
+            $allPayloads = [];
+            foreach ($emballages as $emb) {
+                foreach ($entrepots as $ent) {
+                    for ($d = 0; $d < $daysInMonth; $d++) {
+                        $allPayloads[] = [
+                            'date_prediction' => $startDate->copy()->addDays($d)->format('Y-m-d'),
+                            'emballage_id'    => $emb->id,
+                            'entrepot_id'     => $ent->id,
+                        ];
+                    }
+                }
             }
 
-            return response()->json($response->json());
+            $response = Http::timeout(120)
+                ->post("{$this->fastApiUrl}/predict-batch", $allPayloads);
+
+            if ($response->failed()) {
+                return response()->json(['error' => 'Erreur service IA'], $response->status());
+            }
+
+            // Pour simplifier, on renvoie les résultats bruts groupés par emballage/entrepot
+            // ou on peut structurer la réponse comme attendu par le front
+            return response()->json([
+                'total' => count($allPayloads),
+                'predictions' => $response->json(),
+            ]);
 
         } catch (\Exception $e) {
-            Log::error('FastAPI batch unreachable', ['message' => $e->getMessage()]);
-            return response()->json(['error' => 'Service IA indisponible'], 503);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 

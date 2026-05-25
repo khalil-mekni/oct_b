@@ -23,7 +23,7 @@ type EntrepotLot {
   id: ID!
   quantite: Float!
   entrepot: Entrepot! @belongsTo
-  lot: Lot! @belongsTo
+  lot: Lot @belongsTo
   emballage: Emballage! @belongsTo
   created_at: DateTime
   updated_at: DateTime

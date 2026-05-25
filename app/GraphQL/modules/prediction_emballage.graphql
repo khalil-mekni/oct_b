@@ -1,3 +1,9 @@
+type RecommandationAction {
+  date_suggeree: String!
+  quantite: Float!
+  description: String!
+}
+
 type PredictionEmballage {
   periode: String!
   quantite_predite: Float!
@@ -10,6 +16,11 @@ type PredictionEmballage {
   quantite_recommandee: Float!
   cout_recommande: Float!
   alerte_rupture: Boolean!
+  
+  # Nouveaux champs pour la simulation dynamique
+  consommation_restante_mois: Float
+  receptions_futures_mois: Float
+  recommandations_plan: [RecommandationAction!]
 }
 
 extend type Query {

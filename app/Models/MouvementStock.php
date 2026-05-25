@@ -20,16 +20,23 @@ class MouvementStock extends Model
     'date_mouvement',
     'user_id',
     'statut',
+    'bon_livraison_id',
 ];
 
     protected $casts = [
         'date_mouvement' => 'datetime',
         'quantite' => 'float',
+        'bon_livraison_id' => 'integer',
     ];
 
     public function lot(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Lot::class, 'lot_id');
+    }
+
+    public function bonLivraison(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\BonLivraison::class, 'bon_livraison_id');
     }
 
     public function entrepotSource(): BelongsTo
