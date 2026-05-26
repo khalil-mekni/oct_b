@@ -28,6 +28,10 @@ class CommandeService
             }
         }
 
+        if ((float) $data['quantite'] <= 0) {
+            throw new \InvalidArgumentException("La quantité doit être supérieure à 0.");
+        }
+
         $contrat = Contrat::where('fournisseur_id', $data['fournisseur_id'])->latest('id')->first();
         if (!$contrat) {
             throw new \InvalidArgumentException("Aucun contrat trouvé pour ce fournisseur.");

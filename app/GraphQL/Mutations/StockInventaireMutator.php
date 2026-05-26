@@ -57,6 +57,10 @@ class StockInventaireMutator
                 ? (float) $input['stock_physique']
                 : (float) $inv->stock_physique;
 
+            if ($physique < 0) {
+                throw new \InvalidArgumentException("Le stock physique ne peut pas être négatif.");
+            }
+
             $theorique = app(StockService::class)->getTheoriqueAt(
                 (int) $inv->entrepot_id,
                 (int) $inv->emballage_id,

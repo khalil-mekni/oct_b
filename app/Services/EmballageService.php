@@ -21,6 +21,14 @@ class EmballageService
 
         $data['type'] = strtoupper($data['type']);
 
+        if (isset($data['capacity_value']) && (float) $data['capacity_value'] <= 0) {
+            throw new \InvalidArgumentException("La capacité doit être supérieure à 0.");
+        }
+
+        if (isset($data['min_stock']) && (float) $data['min_stock'] < 0) {
+            throw new \InvalidArgumentException("Le stock minimum ne peut pas être négatif.");
+        }
+
         // Normalisation : null si vide
         $data['capacity_value'] = $data['capacity_value'] ?? null;
         $data['capacity_unit']  = !empty($data['capacity_unit']) ? $data['capacity_unit'] : null;
