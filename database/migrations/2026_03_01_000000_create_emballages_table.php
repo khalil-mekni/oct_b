@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->string('capacity_unit', 20)->nullable();      // kg, g, L...
 
             $table->string('material', 100)->nullable();          // Plastic, Paper...
-            $table->enum('status', ['ACTIVE', 'INACTIVE'])->default('ACTIVE');
+            $table->enum('statut', ['ACTIVE', 'INACTIVE'])->default('ACTIVE');
 
             $table->timestamps();
         });

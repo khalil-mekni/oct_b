@@ -9,43 +9,328 @@ class EmballageSeeder extends Seeder
 {
     public function run(): void
     {
-        // Désactivation des contraintes pour le truncate
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        DB::table('emballages')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        DB::table('emballages')->insert([
 
-        $data = [
-            ['id' => 1,  'name' => 'Cartons',            'code' => 'EMB-CAR-001', 'type' => 'CARTON',   'material' => 'Carton'],
-            ['id' => 2,  'name' => 'Riz Blanc',          'code' => 'EMB-RIZ-001', 'type' => 'SAC',      'material' => 'Polypropylène'],
-            ['id' => 3,  'name' => 'Sucre Blanc',        'code' => 'EMB-SUC-001', 'type' => 'SAC',      'material' => 'Papier'],
-            ['id' => 4,  'name' => 'Riz Étuvé',          'code' => 'EMB-RIZ-002', 'type' => 'SAC',      'material' => 'Polypropylène'],
-            ['id' => 5,  'name' => 'Riz Basmati',        'code' => 'EMB-RIZ-003', 'type' => 'SAC',      'material' => 'Polypropylène'],
-            ['id' => 6,  'name' => 'Complexe',           'code' => 'EMB-COM-001', 'type' => 'SAC',      'material' => 'Plastique'],
-            ['id' => 7,  'name' => 'Rouleaux Adhésifs',  'code' => 'EMB-ADH-001', 'type' => 'AUTRE',    'material' => 'Plastique'],
-            ['id' => 8,  'name' => 'TNCeylon 150 G',     'code' => 'EMB-THE-001', 'type' => 'BOITE',    'material' => 'Carton'],
-            ['id' => 9,  'name' => 'TNExtra 250 G',      'code' => 'EMB-THE-002', 'type' => 'BOITE',    'material' => 'Carton'],
-            ['id' => 10, 'name' => 'TNExtra Plus 100 G', 'code' => 'EMB-THE-003', 'type' => 'BOITE',    'material' => 'Carton'],
-            ['id' => 11, 'name' => 'TNExtra Plus 250 G', 'code' => 'EMB-THE-004', 'type' => 'BOITE',    'material' => 'Carton'],
-            ['id' => 12, 'name' => 'TVBourgeon 250 G',   'code' => 'EMB-THE-005', 'type' => 'BOITE',    'material' => 'Carton'],
-            ['id' => 13, 'name' => 'TVSuperieur 100 G',  'code' => 'EMB-THE-006', 'type' => 'BOITE',    'material' => 'Carton'],
-            ['id' => 14, 'name' => 'TVSuperieur 250 G',  'code' => 'EMB-THE-007', 'type' => 'BOITE',    'material' => 'Carton'],
-            ['id' => 15, 'name' => 'Thermo 200µ',        'code' => 'EMB-FIL-001', 'type' => 'FILM',     'material' => 'Plastique'],
-            ['id' => 16, 'name' => 'Thermo 500µ',        'code' => 'EMB-FIL-002', 'type' => 'FILM',     'material' => 'Plastique'],
-            ['id' => 17, 'name' => 'Étirable',           'code' => 'EMB-FIL-003', 'type' => 'FILM',     'material' => 'Plastique'],
-            ['id' => 18, 'name' => 'Étirable GINOR',     'code' => 'EMB-FIL-004', 'type' => 'FILM',     'material' => 'Plastique'],
-        ];
+            // =========================
+            // THE VERT - COMPLEXE
+            // =========================
 
-        $now = now();
-        foreach ($data as &$item) {
-            $item['description'] = 'Emballage pour ' . $item['name'];
-            $item['min_stock'] = 1000;
-            $item['capacity_value'] = 50;
-            $item['capacity_unit'] = 'KG';
-            $item['status'] = 'ACTIVE';
-            $item['created_at'] = $now;
-            $item['updated_at'] = $now;
-        }
+            [
+                "code" => "TV-CX-100",
+                "name" => "Thé Vert Supérieur 100g",
+                "type" => "COMPLEXE",
+                "min_stock" => 100,
+                "description" => "Complexe Thé Vert 100g",
+                "capacity_value" => 100,
+                "capacity_unit" => "g",
+                "poids" => 0.10,
+                "epaisseur_pp" => 0.05,
+                "epaisseur_ppc" => 0.07,
+                "largeur" => 12.50,
+                "material" => "Polypropylène",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
 
-        DB::table('emballages')->insert($data);
+            [
+                "code" => "TV-CX-250",
+                "name" => "Thé Vert Supérieur 250g",
+                "type" => "COMPLEXE",
+                "min_stock" => 100,
+                "description" => "Complexe Thé Vert 250g",
+                "capacity_value" => 250,
+                "capacity_unit" => "g",
+                "poids" => 0.25,
+                "epaisseur_pp" => 0.06,
+                "epaisseur_ppc" => 0.08,
+                "largeur" => 14.00,
+                "material" => "Polypropylène",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            // =========================
+            // THE VERT - CARTON
+            // =========================
+
+            [
+                "code" => "TV-CRT-100",
+                "name" => "Carton Thé Vert 100g",
+                "type" => "CARTON",
+                "min_stock" => 80,
+                "description" => "Carton Thé Vert",
+                "capacity_value" => 100,
+                "capacity_unit" => "g",
+                "poids" => 0.30,
+                "epaisseur_pp" => 0.10,
+                "epaisseur_ppc" => 0.12,
+                "largeur" => 20.00,
+                "material" => "Carton Kraft",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "code" => "TV-CRT-250",
+                "name" => "Carton Thé Vert 250g",
+                "type" => "CARTON",
+                "min_stock" => 80,
+                "description" => "Carton Thé Vert",
+                "capacity_value" => 250,
+                "capacity_unit" => "g",
+                "poids" => 0.45,
+                "epaisseur_pp" => 0.11,
+                "epaisseur_ppc" => 0.13,
+                "largeur" => 24.00,
+                "material" => "Carton Kraft",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            // =========================
+            // THE NOIR - COMPLEXE
+            // =========================
+
+            [
+                "code" => "TN-CX-100",
+                "name" => "Thé Noir Extra Plus 100g",
+                "type" => "COMPLEXE",
+                "min_stock" => 100,
+                "description" => "Complexe Thé Noir",
+                "capacity_value" => 100,
+                "capacity_unit" => "g",
+                "poids" => 0.11,
+                "epaisseur_pp" => 0.05,
+                "epaisseur_ppc" => 0.07,
+                "largeur" => 12.00,
+                "material" => "Polypropylène",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "code" => "TN-CX-250",
+                "name" => "Thé Noir Extra 250g",
+                "type" => "COMPLEXE",
+                "min_stock" => 100,
+                "description" => "Complexe Thé Noir",
+                "capacity_value" => 250,
+                "capacity_unit" => "g",
+                "poids" => 0.26,
+                "epaisseur_pp" => 0.06,
+                "epaisseur_ppc" => 0.08,
+                "largeur" => 14.50,
+                "material" => "Polypropylène",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            // =========================
+            // THE NOIR - CARTON
+            // =========================
+
+            [
+                "code" => "TN-CRT-100",
+                "name" => "Carton Thé Noir 100g",
+                "type" => "CARTON",
+                "min_stock" => 80,
+                "description" => "Carton Thé Noir",
+                "capacity_value" => 100,
+                "capacity_unit" => "g",
+                "poids" => 0.32,
+                "epaisseur_pp" => 0.10,
+                "epaisseur_ppc" => 0.12,
+                "largeur" => 20.50,
+                "material" => "Carton Kraft",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "code" => "TN-CRT-250",
+                "name" => "Carton Thé Noir 250g",
+                "type" => "CARTON",
+                "min_stock" => 80,
+                "description" => "Carton Thé Noir",
+                "capacity_value" => 250,
+                "capacity_unit" => "g",
+                "poids" => 0.48,
+                "epaisseur_pp" => 0.11,
+                "epaisseur_ppc" => 0.13,
+                "largeur" => 24.50,
+                "material" => "Carton Kraft",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            // =========================
+            // RIZ
+            // =========================
+
+            [
+                "code" => "RIZ-CRT-ETV",
+                "name" => "Carton Riz Étuvé",
+                "type" => "CARTON",
+                "min_stock" => 120,
+                "description" => "Carton Riz Étuvé",
+                "capacity_value" => 1,
+                "capacity_unit" => "piece",
+                "poids" => 1.00,
+                "epaisseur_pp" => 0.15,
+                "epaisseur_ppc" => 0.18,
+                "largeur" => 35.00,
+                "material" => "Carton recyclé",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "code" => "RIZ-CX-BSM",
+                "name" => "Complexe Riz Basmati",
+                "type" => "COMPLEXE",
+                "min_stock" => 100,
+                "description" => "Complexe Riz Basmati",
+                "capacity_value" => 1,
+                "capacity_unit" => "piece",
+                "poids" => 0.80,
+                "epaisseur_pp" => 0.09,
+                "epaisseur_ppc" => 0.11,
+                "largeur" => 28.00,
+                "material" => "Film multicouche",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            // =========================
+            // SUCRE
+            // =========================
+
+            [
+                "code" => "SCR-CRT",
+                "name" => "Carton Sucre Blanc",
+                "type" => "CARTON",
+                "min_stock" => 150,
+                "description" => "Carton Sucre",
+                "capacity_value" => 1,
+                "capacity_unit" => "piece",
+                "poids" => 0.90,
+                "epaisseur_pp" => 0.12,
+                "epaisseur_ppc" => 0.15,
+                "largeur" => 30.00,
+                "material" => "Carton",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "code" => "SCR-ETIR",
+                "name" => "Étirable Sucre Blanc",
+                "type" => "ETIRABLE",
+                "min_stock" => 120,
+                "description" => "Film étirable sucre",
+                "capacity_value" => 1,
+                "capacity_unit" => "piece",
+                "poids" => 0.50,
+                "epaisseur_pp" => 0.03,
+                "epaisseur_ppc" => 0.04,
+                "largeur" => 25.00,
+                "material" => "PVC",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            // =========================
+            // FILMS
+            // =========================
+
+            [
+                "code" => "ETIR-GINOR",
+                "name" => "Étirable Ginor",
+                "type" => "FILM",
+                "min_stock" => 50,
+                "description" => "Film étirable Ginor",
+                "capacity_value" => 1,
+                "capacity_unit" => "rouleau",
+                "poids" => 1.20,
+                "epaisseur_pp" => 0.02,
+                "epaisseur_ppc" => 0.03,
+                "largeur" => 45.00,
+                "material" => "PVC",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "code" => "THERMO-200",
+                "name" => "Thermo 200",
+                "type" => "FILM",
+                "min_stock" => 50,
+                "description" => "Thermo 200",
+                "capacity_value" => 200,
+                "capacity_unit" => "mm",
+                "poids" => 0.70,
+                "epaisseur_pp" => 0.04,
+                "epaisseur_ppc" => 0.05,
+                "largeur" => 20.00,
+                "material" => "Polyoléfine",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            [
+                "code" => "THERMO-500",
+                "name" => "Thermo 500",
+                "type" => "FILM",
+                "min_stock" => 50,
+                "description" => "Thermo 500",
+                "capacity_value" => 500,
+                "capacity_unit" => "mm",
+                "poids" => 1.50,
+                "epaisseur_pp" => 0.05,
+                "epaisseur_ppc" => 0.06,
+                "largeur" => 50.00,
+                "material" => "Polyoléfine",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+            // =========================
+            // ACCESSOIRES
+            // =========================
+
+            [
+                "code" => "ACC-RADH",
+                "name" => "Rouleaux Adhésifs",
+                "type" => "ACCESSOIRE",
+                "min_stock" => 60,
+                "description" => "Rouleaux adhésifs emballage",
+                "capacity_value" => 1,
+                "capacity_unit" => "rouleau",
+                "poids" => 0.20,
+                "epaisseur_pp" => 0.01,
+                "epaisseur_ppc" => 0.02,
+                "largeur" => 5.00,
+                "material" => "Adhésif",
+                "statut" => "ACTIVE",
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+
+        ]);
     }
 }
