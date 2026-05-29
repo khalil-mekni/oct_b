@@ -83,33 +83,7 @@ class OcrParserService
         return null;
     }
 
-    private function parseCommande(string $text): array
-    {
-        return [
-            'numero_commande' => $this->extractStringAfterKeywords($text, [
-                'commande',
-                'numéro commande',
-                'numero commande',
-                'n° commande',
-                'référence commande',
-                'reference commande',
-            ]),
-            'date_commande' => $this->extractDate($text),
-            'date_livraison_prevue' => $this->extractDateAfterKeywords($text, ['livraison prévu','livraison prevu','livraison prévue','date livraison','livraison',]),
-            'quantite' => $this->extractNumberAfterKeywords($text, [
-                'quantité',
-                'quantite',
-                'qty',
-            ]),
-            'fournisseur_nom' => $this->extractStringAfterKeywords($text, [
-                'fournisseur',
-                'supplier',
-            ]),
-            'entrepot_nom' => $this->extractStringAfterKeywords($text, [ 'entrepot', 'entrepôt', 'depot', 'warehouse','destination','Entrepot']),
-            
-            'emballage_nom' => $this->extractStringAfterKeywords($text, ['emballage','type emballage','packaging','package','reference_article','référence_article','article','produit',]),
-        ];
-    }
+    
 
     private function parseBonLivraison(string $text): array
     {

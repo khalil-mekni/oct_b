@@ -123,6 +123,12 @@ class FactureService
 
     public function update(Facture $facture, array $input): Facture
     {
+        if (
+            isset($input['statut']) &&
+            !in_array($input['statut'], Facture::STATUTS)
+            ) {
+                throw new \Exception("Statut invalide");
+            }
         if (isset($input['montant_ht'])) {
             $input['montant_ht'] = (float) $input['montant_ht'];
         }

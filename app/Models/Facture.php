@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Facture extends Model
 {
+    public const STATUTS = [
+    'BROUILLON',
+    'VALIDE',
+    'PAYE',
+    ];
     protected $fillable = [
         'numero_facture',
         'date_facture',
