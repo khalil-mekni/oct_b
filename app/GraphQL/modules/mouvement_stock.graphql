@@ -30,6 +30,9 @@ type MouvementStock {
   entrepotDestination: Entrepot @belongsTo(relation: "entrepotDestination")
   user: User @belongsTo
   bonLivraison: BonLivraison @belongsTo
+
+  created_at: DateTime
+  updated_at: DateTime
 }
 
 input CreateMouvementDraftInput {
