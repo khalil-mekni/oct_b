@@ -28,6 +28,12 @@ type Contrat {
   fournisseur: Fournisseur! @belongsTo
   emballage: Emballage! @belongsTo
 
+  commandes: [Commande!]! @hasMany
+  bonLivraisons: [BonLivraison!]! @hasMany
+  
+  commandes_count: Int @count(relation: "commandes")
+  bon_livraisons_count: Int @count(relation: "bonLivraisons")
+
   created_at: DateTime
   updated_at: DateTime
 }

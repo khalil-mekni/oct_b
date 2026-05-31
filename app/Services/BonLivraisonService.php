@@ -23,11 +23,11 @@ class BonLivraisonService
     ) {
     }
 
-    public function create(array $data, $file)
+    public function create(array $data, $file = null)
     {
         $userId = auth()->id() ?? 1;
 
-        if (!$file instanceof UploadedFile || !$file->isValid()) {
+        if ($file && (!$file instanceof UploadedFile || !$file->isValid())) {
             throw ValidationException::withMessages([
                 'document_bl' => 'Fichier invalide.',
             ]);
@@ -69,7 +69,7 @@ class BonLivraisonService
         
 
         return DB::transaction(function () use ($data, $file, $commande, $userId) {
-            $path = $file->store('bon_livraisons', 'public');
+            $path = $file ? $file->store('bon_livraisons', 'public') : null;
 
             $bl = BonLivraison::create([
                 ...$data,

@@ -18,6 +18,13 @@ final class DeliveryNotesWidget
             ->whereIn('statut', ['EN_ATTENTE', 'PENDING', 'en attente'])
             ->count();
 
+        $late = BonLivraison::query()
+            ->whereIn('statut', ['EN_ATTENTE', 'PENDING', 'en attente'])
+            ->where('created_at', '<', now()->subDays(2))
+            ->count();
+
+        $totalQuantityReceived = BonLivraison::query()->sum('quantite_recue');
+
         $warehousesInvolved = BonLivraison::query()
             ->whereNotNull('entrepot_id')
             ->distinct('entrepot_id')
@@ -47,6 +54,8 @@ final class DeliveryNotesWidget
             'total' => $total,
             'validated' => $validated,
             'pending' => $pending,
+            'late' => $late,
+            'totalQuantityReceived' => $totalQuantityReceived,
             'warehousesInvolved' => $warehousesInvolved,
             'recentDeliveryNotes' => $recentDeliveryNotes,
         ];

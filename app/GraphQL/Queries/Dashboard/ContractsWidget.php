@@ -32,11 +32,11 @@ final class ContractsWidget
 
         $contractAlerts = Alert::query()
             ->where('is_active', true)
-            ->whereIn('type', [
-                'CONTRACT_EXPIRED',
-                'CONTRACT_CONSUMPTION_HIGH',
-                'CONTRACT_QUANTITY_EXCEEDED',
-            ])
+            ->where(function ($query) {
+                $query->where('type', 'like', 'CONTRACT_%')
+                      ->orWhere('type', 'like', '%_EXPIRED')
+                      ->orWhere('type', 'like', '%_EXCEEDED');
+            })
             ->count();
 
         $recentContracts = Contrat::query()

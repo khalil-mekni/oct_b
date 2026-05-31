@@ -117,6 +117,8 @@ type DeliveryNotesWidgetData {
   total: Int!
   validated: Int!
   pending: Int!
+  late: Int!
+  totalQuantityReceived: Float!
   warehousesInvolved: Int!
   recentDeliveryNotes: [DeliveryNoteWidgetItem!]!
 }

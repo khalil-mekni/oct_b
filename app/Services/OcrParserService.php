@@ -90,24 +90,47 @@ class OcrParserService
                 'commande',
                 'numéro commande',
                 'numero commande',
-                'n° commande',
-                'référence commande',
-                'reference commande',
+                'order',
             ]),
-            'date_commande' => $this->extractDate($text),
-            'date_livraison_prevue' => $this->extractDateAfterKeywords($text, ['livraison prévu','livraison prevu','livraison prévue','date livraison','livraison',]),
+            'date_commande' => $this->extractDateAfterKeywords($text, [
+                'date commande',
+                'date de commande',
+                'date',
+            ]),
+            'date_livraison_prevue' => $this->extractDateAfterKeywords($text, [
+                'livraison prévue',
+                'date prévue',
+                'livraison',
+                'delivery date',
+            ]),
             'quantite' => $this->extractNumberAfterKeywords($text, [
                 'quantité',
                 'quantite',
+                'total quantité',
+                'quantity',
                 'qty',
+            ]),
+            'montant_total' => $this->extractNumberAfterKeywords($text, [
+                'montant total',
+                'total',
+                'total général',
             ]),
             'fournisseur_nom' => $this->extractStringAfterKeywords($text, [
                 'fournisseur',
                 'supplier',
             ]),
-            'entrepot_nom' => $this->extractStringAfterKeywords($text, [ 'entrepot', 'entrepôt', 'depot', 'warehouse','destination','Entrepot']),
-            
-            'emballage_nom' => $this->extractStringAfterKeywords($text, ['emballage','type emballage','packaging','package','reference_article','référence_article','article','produit',]),
+            'emballage_nom' => $this->extractStringAfterKeywords($text, [
+                'emballage',
+                'type emballage',
+                'packaging',
+                'package',
+            ]),
+            'entrepot_nom' => $this->extractStringAfterKeywords($text, [
+                'entrepot',
+                'destination',
+                'warehouse',
+                'site',
+            ]),
         ];
     }
 
@@ -119,22 +142,40 @@ class OcrParserService
                 'numéro bl',
                 'numero bl',
                 'bl',
+                'delivery note',
             ]),
-            'date_reception' => $this->extractDate($text),
-            'numero_commande' => $this->extractStringAfterKeywords($text, [
+            'date_livraison' => $this->extractDateAfterKeywords($text, [
+                'date livraison',
+                'date de livraison',
+                'date reception',
+                'date de reception',
+                'date',
+            ]) ?? $this->extractDate($text),
+            'commande_numero' => $this->extractStringAfterKeywords($text, [
                 'commande',
                 'numéro commande',
                 'numero commande',
+                'order no',
+                'order #',
             ]),
             'quantite_recue' => $this->extractNumberAfterKeywords($text, [
                 'quantité',
                 'quantite',
                 'quantité reçue',
                 'quantite recue',
+                'quantity',
+                'qty',
             ]),
             'fournisseur_nom' => $this->extractStringAfterKeywords($text, [
                 'fournisseur',
                 'supplier',
+                'vendu par',
+            ]),
+            'emballage_nom' => $this->extractStringAfterKeywords($text, [
+                'emballage',
+                'type emballage',
+                'packaging',
+                'package',
             ]),
         ];
     }

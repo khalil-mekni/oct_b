@@ -108,16 +108,22 @@ class PredictionEmballageQuery
             $totalQuantityPrediteRaw = collect($periodPredictions)->sum(fn ($item) => (float) ($item['quantite_predite'] ?? 0));
             $totalQuantityPredite = $totalQuantityPrediteRaw;
 
-            // Ajustement des échelles
+            // Ajustement des échelles : Le modèle ML retourne une prédiction JOURNALIÈRE
             if ($isDayView) {
-                // Si le ML retourne un agrégat mensuel pour un jour donné (cas fréquent),
-                // on divise par le nombre de jours du mois pour avoir une estimation journalière.
-                $daysInMonth = Carbon::parse($meta['periode'])->daysInMonth;
-                $totalQuantityPredite = $totalQuantityPrediteRaw / $daysInMonth;
-            } elseif ($granularity === 'month' && $isCurrentMonth && $meta['days_in_period'] > 0) {
-                // En vue mensuelle pour le mois actuel, on proratise selon les jours restants
-                $daysRemaining = max(1, $meta['end_date']->day - $now->day);
-                $totalQuantityPredite = ($totalQuantityPrediteRaw / $meta['days_in_period']) * $daysRemaining;
+                // Pour une vue journalière, on garde la valeur brute
+                $totalQuantityPredite = $totalQuantityPrediteRaw;
+            } elseif ($granularity === 'month') {
+                // Pour une vue mensuelle, on multiplie la prédiction du 1er jour par le nombre de jours du mois
+                // (Approximation simple, idéalement on ferait la somme de chaque jour)
+                $daysInMonth = $meta['days_in_period'];
+                
+                if ($isCurrentMonth) {
+                    // Pour le mois en cours, on ne considère que les jours restants
+                    $daysRemaining = max(1, $meta['end_date']->day - $now->day);
+                    $totalQuantityPredite = $totalQuantityPrediteRaw * $daysRemaining;
+                } else {
+                    $totalQuantityPredite = $totalQuantityPrediteRaw * $daysInMonth;
+                }
             }
 
             if ($isPast) {

@@ -13,7 +13,7 @@ class BonLivraisonMutator
     {
         return $this->service->create(
             $args['input'],
-            $args['document_bl']
+            $args['document_bl'] ?? null
         );
     }
 

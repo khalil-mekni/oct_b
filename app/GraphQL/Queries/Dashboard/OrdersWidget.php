@@ -10,14 +10,8 @@ final class OrdersWidget
 {
     public function __invoke($_, array $args): array
     {
-        $total = Commande::query()->count();
-
         $pending = Commande::query()
             ->where('statut', 'EN_ATTENTE')
-            ->count();
-
-        $validated = Commande::query()
-            ->where('statut', 'VALIDEE')
             ->count();
 
         $partiallyReceived = Commande::query()
@@ -25,8 +19,10 @@ final class OrdersWidget
             ->count();
 
         $received = Commande::query()
-            ->where('statut', 'RECEPTIONNEE')
+            ->whereIn('statut', ['RECEPTIONNEE', 'VALIDEE'])
             ->count();
+        
+        $total = $pending + $partiallyReceived + $received;
 
         $lateByAlert = Alert::query()
             ->where('is_active', true)
@@ -36,20 +32,24 @@ final class OrdersWidget
             ])
             ->count();
         
-        $late = $lateByAlert; // Use alerts for real operational delay tracking
+        $late = $lateByAlert;
 
         $recentOrders = Commande::query()
             ->with('fournisseur')
+            ->whereIn('statut', ['EN_ATTENTE', 'PARTIELLEMENT_RECEPTIONNEE', 'RECEPTIONNEE', 'VALIDEE'])
             ->latest('created_at')
             ->limit(6)
             ->get()
             ->map(function ($order) {
+                $status = $order->statut;
+                if ($status === 'VALIDEE') $status = 'RECEPTIONNEE';
+                
                 return [
                     'id' => $order->id,
                     'reference' => $order->numero_commande ?? ('CMD-' . $order->id),
                     'supplierName' => $order->fournisseur->raison_sociale ?? null,
                     'date' => $order->date_commande ?? $order->created_at,
-                    'status' => $order->statut ?? 'inconnu',
+                    'status' => $status,
                     'totalLabel' => $order->quantite . ' unités',
                 ];
             })
@@ -59,7 +59,7 @@ final class OrdersWidget
         return [
             'total' => $total,
             'pending' => $pending,
-            'validated_count' => $validated,
+            'validated_count' => 0, // Now merged into received
             'partiallyReceived' => $partiallyReceived,
             'received_count' => $received,
             'late' => $late,

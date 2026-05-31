@@ -52,7 +52,7 @@ extend type Query {
 extend type Mutation {
   createBonLivraison(
     input: CreateBonLivraisonInput!
-    document_bl: Upload!
+    document_bl: Upload
   ): BonLivraison
     @field(resolver: "App\\GraphQL\\Mutations\\BonLivraisonMutator@create")
 

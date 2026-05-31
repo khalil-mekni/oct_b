@@ -4,17 +4,11 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class FournisseurSeeder extends Seeder
 {
     public function run(): void
     {
-        // Désactivation des contraintes pour vider la table proprement
-        Schema::disableForeignKeyConstraints();
-        DB::table('fournisseurs')->truncate();
-        Schema::enableForeignKeyConstraints();
-
         DB::table('fournisseurs')->insert([
 
             [
