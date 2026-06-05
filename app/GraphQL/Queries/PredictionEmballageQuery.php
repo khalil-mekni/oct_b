@@ -184,6 +184,7 @@ class PredictionEmballageQuery
                 }
             }
 
+            $stockFinalSansCommande = $virtualStock - $totalQuantityPredite;
             $virtualStock += $quantiteCommandeeCeMois;
             $virtualStock -= $totalQuantityPredite;
 
@@ -195,10 +196,10 @@ class PredictionEmballageQuery
                 'unite' => $unite,
                 'stock_actuel' => round($virtualStockAvant, 2),
                 'stock_securite' => round($minStock, 2),
-                'stock_restant_prevu' => round($virtualStock, 2),
+                'stock_restant_prevu' => round($stockFinalSansCommande, 2),
                 'quantite_recommandee' => ceil($quantiteCommandeeCeMois),
                 'cout_recommande' => round(ceil($quantiteCommandeeCeMois) * $prixUnitaire, 2),
-                'alerte_rupture' => $virtualStock <= $minStock,
+                'alerte_rupture' => $stockFinalSansCommande <= $minStock,
                 'consommation_restante_mois' => round($totalQuantityPredite, 2),
                 'receptions_futures_mois' => round($receptionsFutures, 2),
                 'recommandations_plan' => $recommandationsPeriode,
