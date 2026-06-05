@@ -46,6 +46,7 @@ input UpdateCommandeInput {
 extend type Query {
   commandes: [Commande!]!
     @paginate(model: "App\\Models\\Commande", defaultCount: 10)
+    @orderBy(column: "created_at", direction: DESC)
 
   commande(id: ID! @eq): Commande
     @find(model: "App\\Models\\Commande")

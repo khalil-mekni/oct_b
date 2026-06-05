@@ -82,7 +82,9 @@ input UpdateContratInput {
 
 type Query {
   contrat(id: ID! @eq): Contrat @find
-  contrats: [Contrat!]! @all
+  contrats: [Contrat!]!
+    @paginate(model: "App\\Models\\Contrat", defaultCount: 10)
+    @orderBy(column: "created_at", direction: DESC)
   refreshContratStatuts: [Contrat!]!
     @field(resolver: "App\\GraphQL\\Mutations\\ContratMutator@refreshStatuts")
 }
