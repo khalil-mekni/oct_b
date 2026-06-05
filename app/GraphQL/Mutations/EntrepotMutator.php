@@ -57,4 +57,10 @@ class EntrepotMutator
 
         return $entrepot->refresh();
     }
+
+    public function delete($_, array $args): bool
+    {
+        $entrepot = Entrepot::findOrFail($args['id']);
+        return (bool) $entrepot->delete();
+    }
 }

@@ -56,5 +56,5 @@ extend type Mutation {
     @field(resolver: "App\\GraphQL\\Mutations\\EntrepotMutator@update")
 
   deleteEntrepot(id: ID!): Boolean
-    @delete(model: "App\\Models\\Entrepot")
+    @field(resolver: "App\\GraphQL\\Mutations\\EntrepotMutator@delete")
 }
