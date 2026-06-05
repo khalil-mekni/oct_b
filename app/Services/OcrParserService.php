@@ -43,9 +43,10 @@ class OcrParserService
     private function extractNumberAfterKeywords(string $text, array $keywords): ?float
     {
         foreach ($keywords as $keyword) {
-            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([0-9]+(?:[.,][0-9]+)?)/i';
+            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([0-9\s]+(?:[.,][0-9]+)?)/iu';
             if (preg_match($pattern, $text, $matches)) {
-                return (float) str_replace(',', '.', $matches[1]);
+                $value = preg_replace('/\s+/', '', $matches[1]);
+                return (float) str_replace(',', '.', $value);
             }
         }
 
@@ -55,7 +56,7 @@ class OcrParserService
     private function extractStringAfterKeywords(string $text, array $keywords): ?string
     {
         foreach ($keywords as $keyword) {
-            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([^\n]+)/i';
+            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([^\n]+)/iu';
             if (preg_match($pattern, $text, $matches)) {
                 return trim($matches[1]);
             }
@@ -161,8 +162,12 @@ class OcrParserService
             'quantite_recue' => $this->extractNumberAfterKeywords($text, [
                 'quantité',
                 'quantite',
+                'qté',
+                'qte',
                 'quantité reçue',
                 'quantite recue',
+                'qté reçue',
+                'qte recue',
                 'quantity',
                 'qty',
             ]),
@@ -236,9 +241,14 @@ class OcrParserService
         'quantite_contractuelle' => $this->extractNumberAfterKeywords($text, [
             'quantité contractuelle',
             'quantite contractuelle',
+            'qté contractuelle',
+            'qte contractuelle',
             'volume',
             'quantité',
-            'quantite',]),
+            'quantite',
+            'qté',
+            'qte',
+        ]),
         'montant_ht' => $this->extractNumberAfterKeywords($text, [
             'montant ht',
             'total ht',
