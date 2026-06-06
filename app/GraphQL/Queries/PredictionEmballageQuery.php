@@ -84,7 +84,7 @@ class PredictionEmballageQuery
         // --- PHASE 2 : Simulation et Formatage ---
         $virtualStock = $stockActuelInitial;
         $results = [];
-        $minStock = $emballage->min_stock ?: 500; 
+        $minStock = 0; // Stock de sécurité éliminé à la demande de l'utilisateur
         $currentIndex = 0;
 
         foreach ($periodMetadata as $meta) {
@@ -164,9 +164,10 @@ class PredictionEmballageQuery
             if ($besoinGlobal > 0) {
                 if ($isCurrentMonth || $isDayView) {
                     $recommandationsPeriode[] = [
-                        'date_suggeree' => $now->copy()->addDay()->format('Y-m-d'),
+                        'date_suggeree' => $now->format('Y-m-d'),
+                        'date_livraison' => $now->copy()->addDays(10)->format('Y-m-d'),
                         'quantite' => ceil($besoinGlobal),
-                        'description' => "Commande urgente",
+                        'description' => "Commande immédiate (Livraison prévue +10j)",
                     ];
                     $quantiteCommandeeCeMois = $besoinGlobal;
                 } else {
@@ -174,8 +175,10 @@ class PredictionEmballageQuery
                     $qteParCommande = $besoinGlobal / $nbCommandes;
                     for ($j = 0; $j < $nbCommandes; $j++) {
                         $jour = ($j === 0) ? 5 : (($j === 1) ? 15 : 25);
+                        $dateCommande = $meta['start_date']->copy()->addDays($jour - 1);
                         $recommandationsPeriode[] = [
-                            'date_suggeree' => $meta['start_date']->copy()->addDays($jour - 1)->format('Y-m-d'),
+                            'date_suggeree' => $dateCommande->format('Y-m-d'),
+                            'date_livraison' => $dateCommande->copy()->addDays(10)->format('Y-m-d'),
                             'quantite' => ceil($qteParCommande),
                             'description' => "Approvisionnement échelonné (" . ($j+1) . "/$nbCommandes)",
                         ];
