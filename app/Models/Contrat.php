@@ -52,4 +52,14 @@ class Contrat extends Model
     {
         return $this->belongsTo(Emballage::class);
     }
+
+    public function commandes()
+    {
+        return $this->hasMany(Commande::class);
+    }
+
+    public function bonLivraisons()
+    {
+        return $this->hasManyThrough(BonLivraison::class, Commande::class);
+    }
 }

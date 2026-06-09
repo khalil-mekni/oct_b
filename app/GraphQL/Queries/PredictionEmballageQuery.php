@@ -84,7 +84,7 @@ class PredictionEmballageQuery
         // --- PHASE 2 : Simulation et Formatage ---
         $virtualStock = $stockActuelInitial;
         $results = [];
-        $minStock = $emballage->min_stock ?: 500; 
+        $minStock = 0; // Stock de sécurité éliminé à la demande de l'utilisateur
         $currentIndex = 0;
 
         foreach ($periodMetadata as $meta) {
@@ -108,16 +108,22 @@ class PredictionEmballageQuery
             $totalQuantityPrediteRaw = collect($periodPredictions)->sum(fn ($item) => (float) ($item['quantite_predite'] ?? 0));
             $totalQuantityPredite = $totalQuantityPrediteRaw;
 
-            // Ajustement des échelles
+            // Ajustement des échelles : Le modèle ML retourne une prédiction JOURNALIÈRE
             if ($isDayView) {
-                // Si le ML retourne un agrégat mensuel pour un jour donné (cas fréquent),
-                // on divise par le nombre de jours du mois pour avoir une estimation journalière.
-                $daysInMonth = Carbon::parse($meta['periode'])->daysInMonth;
-                $totalQuantityPredite = $totalQuantityPrediteRaw / $daysInMonth;
-            } elseif ($granularity === 'month' && $isCurrentMonth && $meta['days_in_period'] > 0) {
-                // En vue mensuelle pour le mois actuel, on proratise selon les jours restants
-                $daysRemaining = max(1, $meta['end_date']->day - $now->day);
-                $totalQuantityPredite = ($totalQuantityPrediteRaw / $meta['days_in_period']) * $daysRemaining;
+                // Pour une vue journalière, on garde la valeur brute
+                $totalQuantityPredite = $totalQuantityPrediteRaw;
+            } elseif ($granularity === 'month') {
+                // Pour une vue mensuelle, on multiplie la prédiction du 1er jour par le nombre de jours du mois
+                // (Approximation simple, idéalement on ferait la somme de chaque jour)
+                $daysInMonth = $meta['days_in_period'];
+                
+                if ($isCurrentMonth) {
+                    // Pour le mois en cours, on ne considère que les jours restants
+                    $daysRemaining = max(1, $meta['end_date']->day - $now->day);
+                    $totalQuantityPredite = $totalQuantityPrediteRaw * $daysRemaining;
+                } else {
+                    $totalQuantityPredite = $totalQuantityPrediteRaw * $daysInMonth;
+                }
             }
 
             if ($isPast) {
@@ -158,9 +164,10 @@ class PredictionEmballageQuery
             if ($besoinGlobal > 0) {
                 if ($isCurrentMonth || $isDayView) {
                     $recommandationsPeriode[] = [
-                        'date_suggeree' => $now->copy()->addDay()->format('Y-m-d'),
+                        'date_suggeree' => $now->format('Y-m-d'),
+                        'date_livraison' => $now->copy()->addDays(10)->format('Y-m-d'),
                         'quantite' => ceil($besoinGlobal),
-                        'description' => "Commande urgente",
+                        'description' => "Commande immédiate (Livraison prévue +10j)",
                     ];
                     $quantiteCommandeeCeMois = $besoinGlobal;
                 } else {
@@ -168,8 +175,10 @@ class PredictionEmballageQuery
                     $qteParCommande = $besoinGlobal / $nbCommandes;
                     for ($j = 0; $j < $nbCommandes; $j++) {
                         $jour = ($j === 0) ? 5 : (($j === 1) ? 15 : 25);
+                        $dateCommande = $meta['start_date']->copy()->addDays($jour - 1);
                         $recommandationsPeriode[] = [
-                            'date_suggeree' => $meta['start_date']->copy()->addDays($jour - 1)->format('Y-m-d'),
+                            'date_suggeree' => $dateCommande->format('Y-m-d'),
+                            'date_livraison' => $dateCommande->copy()->addDays(10)->format('Y-m-d'),
                             'quantite' => ceil($qteParCommande),
                             'description' => "Approvisionnement échelonné (" . ($j+1) . "/$nbCommandes)",
                         ];
@@ -178,6 +187,7 @@ class PredictionEmballageQuery
                 }
             }
 
+            $stockFinalSansCommande = $virtualStock - $totalQuantityPredite;
             $virtualStock += $quantiteCommandeeCeMois;
             $virtualStock -= $totalQuantityPredite;
 
@@ -189,10 +199,10 @@ class PredictionEmballageQuery
                 'unite' => $unite,
                 'stock_actuel' => round($virtualStockAvant, 2),
                 'stock_securite' => round($minStock, 2),
-                'stock_restant_prevu' => round($virtualStock, 2),
+                'stock_restant_prevu' => round($stockFinalSansCommande, 2),
                 'quantite_recommandee' => ceil($quantiteCommandeeCeMois),
                 'cout_recommande' => round(ceil($quantiteCommandeeCeMois) * $prixUnitaire, 2),
-                'alerte_rupture' => $virtualStock <= $minStock,
+                'alerte_rupture' => $stockFinalSansCommande <= $minStock,
                 'consommation_restante_mois' => round($totalQuantityPredite, 2),
                 'receptions_futures_mois' => round($receptionsFutures, 2),
                 'recommandations_plan' => $recommandationsPeriode,

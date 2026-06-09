@@ -28,6 +28,12 @@ type Contrat {
   fournisseur: Fournisseur! @belongsTo
   emballage: Emballage! @belongsTo
 
+  commandes: [Commande!]! @hasMany
+  bonLivraisons: [BonLivraison!]! @hasMany
+  
+  commandes_count: Int @count(relation: "commandes")
+  bon_livraisons_count: Int @count(relation: "bonLivraisons")
+
   created_at: DateTime
   updated_at: DateTime
 }
@@ -76,7 +82,9 @@ input UpdateContratInput {
 
 type Query {
   contrat(id: ID! @eq): Contrat @find
-  contrats: [Contrat!]! @all
+  contrats: [Contrat!]!
+    @paginate(model: "App\\Models\\Contrat", defaultCount: 10)
+    @orderBy(column: "created_at", direction: DESC)
   refreshContratStatuts: [Contrat!]!
     @field(resolver: "App\\GraphQL\\Mutations\\ContratMutator@refreshStatuts")
 }

@@ -15,24 +15,23 @@ EXPECTED_COLUMNS = [
 # Mapping pour emballage_nom pour assurer la cohérence avec l'entraînement
 # Supporte int et str pour les clés
 EMBALLAGE_ID_TO_NAME = {
-    1: "Cartons", "1": "Cartons",
-    2: "Riz Blanc", "2": "Riz Blanc",
-    3: "Sucre Blanc", "3": "Sucre Blanc",
-    4: "Riz Étuvé", "4": "Riz Étuvé",
-    5: "Riz Basmati", "5": "Riz Basmati",
-    6: "Complexe", "6": "Complexe",
-    7: "Rouleaux Adhésifs", "7": "Rouleaux Adhésifs",
-    8: "TNCeylon 150 G", "8": "TNCeylon 150 G",
-    9: "TNExtra 250 G", "9": "TNExtra 250 G",
-    10: "TNExtra Plus 100 G", "10": "TNExtra Plus 100 G",
-    11: "TNExtra Plus 250 G", "11": "TNExtra Plus 250 G",
-    12: "TVBourgeon 250 G", "12": "TVBourgeon 250 G",
-    13: "TVSuperieur 100 G", "13": "TVSuperieur 100 G",
-    14: "TVSuperieur 250 G", "14": "TVSuperieur 250 G",
-    15: "Thermo 200µ", "15": "Thermo 200µ",
-    16: "Thermo 500µ", "16": "Thermo 500µ",
-    17: "Étirable", "17": "Étirable",
-    18: "Étirable GINOR", "18": "Étirable GINOR",
+    # Mapping par ID (prioritaire et plus robuste)
+    1: "TVSuperieur 100 G", "1": "TVSuperieur 100 G",
+    2: "TVSuperieur 250 G", "2": "TVSuperieur 250 G",
+    5: "TNExtra Plus 100 G", "5": "TNExtra Plus 100 G",
+    6: "TNExtra 250 G", "6": "TNExtra 250 G",
+    9: "Riz Etuvé", "9": "Riz Etuvé",
+    10: "RIz Basmati", "10": "RIz Basmati",
+    11: "Sucre Blanc", "11": "Sucre Blanc",
+
+    # Mapping par Nom (Fallback si l'ID ne correspond pas)
+    "Thé Vert Supérieur 100g": "TVSuperieur 100 G",
+    "Thé Vert Supérieur 250g": "TVSuperieur 250 G",
+    "Thé Noir Extra Plus 100g": "TNExtra Plus 100 G",
+    "Thé Noir Extra 250g": "TNExtra 250 G",
+    "Carton Riz Étuvé": "Riz Etuvé",
+    "Complexe Riz Basmati": "RIz Basmati",
+    "Carton Sucre Blanc": "Sucre Blanc",
 }
 
 def build_features(payload: dict) -> pd.DataFrame:
@@ -72,9 +71,6 @@ def build_features(payload: dict) -> pd.DataFrame:
         "entrepot_source_id": float(entrepot_id), 
         "emballage_nom": str(emballage_nom),
     }
-
-    # Debug print pour inspecter les entrées du modèle
-    print(f"DEBUG - Model Input: {data}")
 
     df = pd.DataFrame([data])
     

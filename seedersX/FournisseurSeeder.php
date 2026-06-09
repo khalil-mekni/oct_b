@@ -4,24 +4,13 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class FournisseurSeeder extends Seeder
 {
     public function run(): void
     {
-<<<<<<< HEAD
         DB::table('fournisseurs')->insert([
 
-=======
-        // Désactivation des contraintes pour vider la table proprement
-        Schema::disableForeignKeyConstraints();
-        DB::table('fournisseurs')->truncate();
-        Schema::enableForeignKeyConstraints();
-
-        DB::table('fournisseurs')->insert([
-
->>>>>>> origin/predict1.1
             [
                 'raison_sociale' => 'Tunisie Matières Premières',
                 'logo' => null,

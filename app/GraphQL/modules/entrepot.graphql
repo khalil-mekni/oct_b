@@ -26,7 +26,7 @@ type EntrepotLot {
 }
 
 input CreateEntrepotInput {
-  name: String!
+  nom: String!
   adresse: String
   capacite_totale: Float!
   statut: String
@@ -56,5 +56,5 @@ extend type Mutation {
     @field(resolver: "App\\GraphQL\\Mutations\\EntrepotMutator@update")
 
   deleteEntrepot(id: ID!): Boolean
-    @delete(model: "App\\Models\\Entrepot")
+    @field(resolver: "App\\GraphQL\\Mutations\\EntrepotMutator@delete")
 }

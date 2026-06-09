@@ -43,9 +43,10 @@ class OcrParserService
     private function extractNumberAfterKeywords(string $text, array $keywords): ?float
     {
         foreach ($keywords as $keyword) {
-            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([0-9]+(?:[.,][0-9]+)?)/i';
+            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([0-9\s]+(?:[.,][0-9]+)?)/iu';
             if (preg_match($pattern, $text, $matches)) {
-                return (float) str_replace(',', '.', $matches[1]);
+                $value = preg_replace('/\s+/', '', $matches[1]);
+                return (float) str_replace(',', '.', $value);
             }
         }
 
@@ -55,7 +56,7 @@ class OcrParserService
     private function extractStringAfterKeywords(string $text, array $keywords): ?string
     {
         foreach ($keywords as $keyword) {
-            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([^\n]+)/i';
+            $pattern = '/(?:' . preg_quote($keyword, '/') . ')\s*[:\-]?\s*([^\n]+)/iu';
             if (preg_match($pattern, $text, $matches)) {
                 return trim($matches[1]);
             }
@@ -83,7 +84,60 @@ class OcrParserService
         return null;
     }
 
+<<<<<<< HEAD
     
+=======
+    private function parseCommande(string $text): array
+    {
+        return [
+            'numero_commande' => $this->extractStringAfterKeywords($text, [
+                'commande',
+                'numéro commande',
+                'numero commande',
+                'order',
+            ]),
+            'date_commande' => $this->extractDateAfterKeywords($text, [
+                'date commande',
+                'date de commande',
+                'date',
+            ]),
+            'date_livraison_prevue' => $this->extractDateAfterKeywords($text, [
+                'livraison prévue',
+                'date prévue',
+                'livraison',
+                'delivery date',
+            ]),
+            'quantite' => $this->extractNumberAfterKeywords($text, [
+                'quantité',
+                'quantite',
+                'total quantité',
+                'quantity',
+                'qty',
+            ]),
+            'montant_total' => $this->extractNumberAfterKeywords($text, [
+                'montant total',
+                'total',
+                'total général',
+            ]),
+            'fournisseur_nom' => $this->extractStringAfterKeywords($text, [
+                'fournisseur',
+                'supplier',
+            ]),
+            'emballage_nom' => $this->extractStringAfterKeywords($text, [
+                'emballage',
+                'type emballage',
+                'packaging',
+                'package',
+            ]),
+            'entrepot_nom' => $this->extractStringAfterKeywords($text, [
+                'entrepot',
+                'destination',
+                'warehouse',
+                'site',
+            ]),
+        ];
+    }
+>>>>>>> origin/predict1.1
 
     private function parseBonLivraison(string $text): array
     {
@@ -93,22 +147,44 @@ class OcrParserService
                 'numéro bl',
                 'numero bl',
                 'bl',
+                'delivery note',
             ]),
-            'date_reception' => $this->extractDate($text),
-            'numero_commande' => $this->extractStringAfterKeywords($text, [
+            'date_livraison' => $this->extractDateAfterKeywords($text, [
+                'date livraison',
+                'date de livraison',
+                'date reception',
+                'date de reception',
+                'date',
+            ]) ?? $this->extractDate($text),
+            'commande_numero' => $this->extractStringAfterKeywords($text, [
                 'commande',
                 'numéro commande',
                 'numero commande',
+                'order no',
+                'order #',
             ]),
             'quantite_recue' => $this->extractNumberAfterKeywords($text, [
                 'quantité',
                 'quantite',
+                'qté',
+                'qte',
                 'quantité reçue',
                 'quantite recue',
+                'qté reçue',
+                'qte recue',
+                'quantity',
+                'qty',
             ]),
             'fournisseur_nom' => $this->extractStringAfterKeywords($text, [
                 'fournisseur',
                 'supplier',
+                'vendu par',
+            ]),
+            'emballage_nom' => $this->extractStringAfterKeywords($text, [
+                'emballage',
+                'type emballage',
+                'packaging',
+                'package',
             ]),
         ];
     }
@@ -169,9 +245,14 @@ class OcrParserService
         'quantite_contractuelle' => $this->extractNumberAfterKeywords($text, [
             'quantité contractuelle',
             'quantite contractuelle',
+            'qté contractuelle',
+            'qte contractuelle',
             'volume',
             'quantité',
-            'quantite',]),
+            'quantite',
+            'qté',
+            'qte',
+        ]),
         'montant_ht' => $this->extractNumberAfterKeywords($text, [
             'montant ht',
             'total ht',

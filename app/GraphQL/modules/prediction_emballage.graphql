@@ -1,5 +1,6 @@
 type RecommandationAction {
   date_suggeree: String!
+  date_livraison: String
   quantite: Float!
   description: String!
 }
