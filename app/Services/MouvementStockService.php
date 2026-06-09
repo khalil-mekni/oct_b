@@ -79,9 +79,16 @@ class MouvementStockService
         // ✅ 3. Marquer comme validé
         $m->update([
             'statut' => 'VALIDE',
-            'date_mouvement' => $m->date_mouvement ?? now(),
+            'date_mouvement' => now(), // Toujours mettre à jour avec l'heure précise de validation
             'user_id' => $m->user_id ?? Auth::id(),
         ]);
+
+        if ($m->bon_livraison_id) {
+            $bl = \App\Models\BonLivraison::find($m->bon_livraison_id);
+            if ($bl) {
+                app(BonLivraisonService::class)->finalizeValidation($bl);
+            }
+        }
 
         $impactedEntrepotIds = $this->extractImpactedEntrepotIds($m);
 

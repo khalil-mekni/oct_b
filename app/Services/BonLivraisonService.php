@@ -68,47 +68,70 @@ class BonLivraisonService
         }
         
 
-        return DB::transaction(function () use ($data, $file, $commande, $userId) {
+        $dateReception = isset($data['date_reception']) 
+            ? \Illuminate\Support\Carbon::parse($data['date_reception'])->setTimeFrom(now()) 
+            : now();
+
+        return DB::transaction(function () use ($data, $file, $commande, $userId, $dateReception) {
             $path = $file ? $file->store('bon_livraisons', 'public') : null;
 
             $bl = BonLivraison::create([
                 ...$data,
+                'date_reception' => $dateReception,
                 'numero_bl' => 'BL-' . now()->format('Ymd-His'),
                 'commande_id' => $commande->id,
-                'statut' => 'VALIDE',
+                'statut' => 'EN_ATTENTE',
                 'document_bl' => $path,
-                'date_validation' => now(),
-                'validated_by' => $userId,
                 'receptionne_par' => $userId,
             ]);
 
-            // Création automatique du mouvement d'entrée EN BROUILLON
+            // Création du mouvement d'entrée en BROUILLON
             $this->mouvementStockService->createDraft([
                 'type_mouvement' => 'ENT',
                 'emballage_id' => (int) $bl->emballage_id,
                 'entrepot_destination_id' => (int) $bl->entrepot_id,
                 'quantite' => (float) $bl->quantite_recue,
-                'date_mouvement' => $bl->date_reception,
+                'date_mouvement' => $dateReception,
                 'user_id' => $userId,
                 'bon_livraison_id' => $bl->id,
             ]);
 
-            $total = BonLivraison::where('commande_id', $commande->id)->sum('quantite_recue');
+            return $bl->refresh();
+        });
+    }
 
-            if ($total < $commande->quantite) {
+    /**
+     * Finalise la validation du BL (appelé quand le mouvement de stock est validé)
+     */
+    public function finalizeValidation(BonLivraison $bl): void
+    {
+        if ($bl->statut === 'VALIDE') {
+            return;
+        }
+
+        $bl->update([
+            'statut' => 'VALIDE',
+            'date_validation' => now(),
+            'validated_by' => auth()->id() ?? $bl->receptionne_par,
+        ]);
+
+        $commande = $bl->commande;
+        if ($commande) {
+            $totalValide = BonLivraison::where('commande_id', $commande->id)
+                ->where('statut', 'VALIDE')
+                ->sum('quantite_recue');
+
+            if ($totalValide <= 0) {
+                $commande->statut = 'EN_ATTENTE';
+            } elseif ($totalValide < $commande->quantite) {
                 $commande->statut = 'PARTIELLEMENT_RECEPTIONNEE';
             } else {
                 $commande->statut = 'RECEPTIONNEE';
             }
-            $this->incrementerQuantiteContrat($commande,(float) $data['quantite_recue']);
-
-
             $commande->save();
 
-            //$this->alertScanTrigger->dispatch();
-
-            return $bl->refresh();
-        });
+            $this->incrementerQuantiteContrat($commande, (float) $bl->quantite_recue);
+        }
     }
 
     public function update(BonLivraison $bonLivraison, array $data): BonLivraison
@@ -147,46 +170,65 @@ class BonLivraisonService
                 throw new \InvalidArgumentException("Emballage not found.");
             }
         }
+        if (isset($data['date_reception'])) {
+            $data['date_reception'] = \Illuminate\Support\Carbon::parse($data['date_reception'])->setTimeFrom(now());
+        }
+
         $ancienneQuantite = (float) $bonLivraison->quantite_recue;
         $nouvelleQuantite = isset($data['quantite_recue'])
          ? (float) $data['quantite_recue']
          : $ancienneQuantite;
+        
         $diff = $nouvelleQuantite - $ancienneQuantite;
+        
         $bonLivraison->update($data);
-        if ($diff != 0) {
+        
+        if ($diff != 0 && $bonLivraison->statut === 'VALIDE') {
             $this->incrementerQuantiteContrat($commande, $diff);
         }
-        $total = BonLivraison::where('commande_id', $commande->id)->sum('quantite_recue');
-        if ($total <= 0) {
-            $commande->statut = 'EN_ATTENTE';
-        } 
-        elseif ($total < $commande->quantite) {
-            $commande->statut = 'PARTIELLEMENT_RECEPTIONNEE';
+
+        if ($commande) {
+            $totalValide = BonLivraison::where('commande_id', $commande->id)
+                ->where('statut', 'VALIDE')
+                ->sum('quantite_recue');
+                
+            if ($totalValide <= 0) {
+                $commande->statut = 'EN_ATTENTE';
+            } elseif ($totalValide < $commande->quantite) {
+                $commande->statut = 'PARTIELLEMENT_RECEPTIONNEE';
+            } else {
+                $commande->statut = 'RECEPTIONNEE';
+            }
+            $commande->save();
         }
-        else {
-            $commande->statut = 'RECEPTIONNEE';
-        }
-        $commande->save();
         
-        //$this->alertScanTrigger->dispatch();
         return $bonLivraison->refresh();
     }
 
     public function delete(BonLivraison $bonLivraison): BonLivraison
     {
-        
         $commande = $bonLivraison->commande;
         $quantite = (float) $bonLivraison->quantite_recue;
-        if ($commande) {
+        
+        if ($commande && $bonLivraison->statut === 'VALIDE') {
             $this->incrementerQuantiteContrat($commande, -$quantite);
         }
 
+        // Supprimer les mouvements en brouillon associés
+        \App\Models\MouvementStock::where('bon_livraison_id', $bonLivraison->id)
+            ->where('statut', 'BROUILLON')
+            ->delete();
+
        $bonLivraison->delete();
+
        if ($commande) {
-        $total = BonLivraison::where('commande_id', $commande->id)->sum('quantite_recue');
-        if ($total <= 0) {
-            $commande->statut = 'En_ATTENTE';
-        } elseif ($total < $commande->quantite) {
+        $totalValide = BonLivraison::where('commande_id', $commande->id)
+            ->where('statut', 'VALIDE')
+            ->sum('quantite_recue');
+            
+        if ($totalValide <= 0) {
+            $commande->statut = 'EN_ATTENTE';
+        } elseif ($totalValide < $commande->quantite) {
              $commande->statut = 'PARTIELLEMENT_RECEPTIONNEE';
         } else {
             $commande->statut = 'RECEPTIONNEE';
@@ -194,8 +236,6 @@ class BonLivraisonService
 
         $commande->save();
     }
-
-        //$this->alertScanTrigger->dispatch();
 
         return $bonLivraison;
     }
